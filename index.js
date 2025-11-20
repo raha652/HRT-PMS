@@ -723,9 +723,10 @@ function renderMotorcycles(motorcycles) {
           <p class="text-gray-200">🎨 ${motorcycle.motorcycleColor}</p>
           <p class="text-sm text-gray-200 font-semibold">🏢 ${motorcycle.motorcycleDepartment}</p>
         </div>
-        <button class="delete-btn" onclick="deleteMotorcycle('${motorcycle.__backendId}')">
-          🗑️ حذف
-        </button>
+        <div class="flex gap-2">
+          <button class="btn btn-primary" onclick="openEditMotorcycleModal('${motorcycle.__backendId}')">✏️ ویرایش</button>
+          <button class="delete-btn" onclick="deleteMotorcycle('${motorcycle.__backendId}')">🗑️ حذف</button>
+        </div>
       </div>
       <div class="border-t border-gray-600 pt-4">
         <p class="text-sm text-gray-100">🔢 پلاک: ${motorcycle.motorcyclePlate}</p>
@@ -753,9 +754,10 @@ function renderEmployees(employees) {
             <p class="text-sm text-gray-100 mt-1">🆔 ${employee.employeeId} | 👆 ${employee.fingerprintId}</p>
           </div>
         </div>
-        <button class="delete-btn" onclick="deleteEmployee('${employee.__backendId}')">
-          🗑️ حذف
-        </button>
+        <div class="flex gap-2">
+          <button class="btn btn-primary" onclick="openEditEmployeeModal('${employee.__backendId}')">✏️ ویرایش</button>
+          <button class="delete-btn" onclick="deleteEmployee('${employee.__backendId}')">🗑️ حذف</button>
+        </div>
       </div>
     </div>
   `).join('');
@@ -1164,6 +1166,26 @@ function openNewMotorcycleModal() {
 function openNewEmployeeModal() {
   document.getElementById('new-employee-modal').classList.add('active');
 }
+function openEditMotorcycleModal(motorcycleId) {
+  const motorcycle = allData.find(d => d.__backendId === motorcycleId);
+  if (!motorcycle) return;
+  document.getElementById('edit-motorcycle-name').value = motorcycle.motorcycleName;
+  document.getElementById('edit-motorcycle-color').value = motorcycle.motorcycleColor;
+  document.getElementById('edit-motorcycle-plate').value = motorcycle.motorcyclePlate;
+  document.getElementById('edit-motorcycle-department').value = motorcycle.motorcycleDepartment;
+  document.getElementById('edit-motorcycle-form').dataset.id = motorcycleId;
+  document.getElementById('edit-motorcycle-modal').classList.add('active');
+}
+function openEditEmployeeModal(employeeId) {
+  const employee = allData.find(d => d.__backendId === employeeId);
+  if (!employee) return;
+  document.getElementById('edit-employee-name').value = employee.employeeName;
+  document.getElementById('edit-employee-id').value = employee.employeeId;
+  document.getElementById('edit-employee-department').value = employee.department;
+  document.getElementById('edit-employee-fingerprint').value = employee.fingerprintId;
+  document.getElementById('edit-employee-form').dataset.id = employeeId;
+  document.getElementById('edit-employee-modal').classList.add('active');
+}
 function closeModal(modalId) {
   document.getElementById(modalId).classList.remove('active');
 }
@@ -1270,6 +1292,28 @@ async function submitNewMotorcycle(event) {
     showToast('خطا در افزودن موتور سکیل', '❌');
   }
 }
+async function submitEditMotorcycle(event) {
+  event.preventDefault();
+  const form = event.target;
+  const motorcycleId = form.dataset.id;
+  const motorcycle = allData.find(d => d.__backendId === motorcycleId);
+  if (!motorcycle) return;
+  const updatedMotorcycle = {
+    ...motorcycle,
+    motorcycleName: document.getElementById('edit-motorcycle-name').value,
+    motorcycleColor: document.getElementById('edit-motorcycle-color').value,
+    motorcyclePlate: document.getElementById('edit-motorcycle-plate').value,
+    motorcycleDepartment: document.getElementById('edit-motorcycle-department').value
+  };
+  const result = await window.dataSdk.update(updatedMotorcycle);
+  if (result.isOk) {
+    showToast('موتور سکیل با موفقیت ویرایش شد', '✅');
+    closeModal('edit-motorcycle-modal');
+    updateCurrentPage();
+  } else {
+    showToast('خطا در ویرایش موتور سکیل', '❌');
+  }
+}
 async function submitNewEmployee(event) {
   event.preventDefault();
   if (currentRecordCount >= 100000000000) {
@@ -1293,6 +1337,28 @@ async function submitNewEmployee(event) {
     form.reset();
   } else {
     showToast('خطا در افزودن کارمند', '❌');
+  }
+}
+async function submitEditEmployee(event) {
+  event.preventDefault();
+  const form = event.target;
+  const employeeId = form.dataset.id;
+  const employee = allData.find(d => d.__backendId === employeeId);
+  if (!employee) return;
+  const updatedEmployee = {
+    ...employee,
+    employeeName: document.getElementById('edit-employee-name').value,
+    employeeId: document.getElementById('edit-employee-id').value,
+    department: document.getElementById('edit-employee-department').value,
+    fingerprintId: document.getElementById('edit-employee-fingerprint').value
+  };
+  const result = await window.dataSdk.update(updatedEmployee);
+  if (result.isOk) {
+    showToast('کارمند با موفقیت ویرایش شد', '✅');
+    closeModal('edit-employee-modal');
+    updateCurrentPage();
+  } else {
+    showToast('خطا در ویرایش کارمند', '❌');
   }
 }
 async function markAsExit(requestId) {
