@@ -132,10 +132,28 @@
     </form>
    </div>
   </div>
+  <div id="edit-employee-modal" class="modal">
+   <div class="modal-content">
+    <h2 class="text-2xl font-bold text-gray-800 mb-6">ویرایش کارمند</h2>
+    <form id="edit-employee-form" onsubmit="submitEditEmployee(event)">
+     <div class="space-y-4">
+      <div><label class="block text-sm font-semibold text-gray-700 mb-2">نام و نام خانوادگی</label> <input type="text" id="edit-employee-name" class="input-field" placeholder="مثال: شهاب حمیدی" required>
+      </div>
+      <div><label class="block text-sm font-semibold text-gray-700 mb-2">آیدی</label> <input type="text" id="edit-employee-id" class="input-field" placeholder="مثال: 1806" required>
+      </div>
+      <div><label class="block text-sm font-semibold text-gray-700 mb-2">دیپارتمنت</label> <input type="text" id="edit-employee-department" class="input-field" placeholder="مثال: پاور" required>
+      </div>
+      <div><label class="block text-sm font-semibold text-gray-700 mb-2">شناسه اثر انگشت</label> <input type="text" id="edit-employee-fingerprint" class="input-field" placeholder="مثال: SH001" required>
+      </div>
+      <div class="flex gap-3 mt-6"><button type="submit" class="btn btn-success flex-1">✅ ذخیره تغییرات</button> <button type="button" class="btn btn-secondary flex-1" onclick="closeModal('edit-employee-modal')">❌ انصراف</button>
+      </div>
+     </div>
+    </form>
+   </div>
+  </div>
   <div id="toast" class="toast"><span id="toast-icon">✅</span> <span id="toast-message"></span>
   </div>
   <script src="./googleSheets.js"></script>
   <script src="./index.js"></script>
  </body>
-
 </html>
