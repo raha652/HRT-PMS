@@ -113,6 +113,25 @@
     </form>
    </div>
   </div>
+  <div id="edit-motorcycle-modal" class="modal">
+   <div class="modal-content">
+    <h2 class="text-2xl font-bold text-gray-800 mb-6">ویرایش موتور سکیل</h2>
+    <form id="edit-motorcycle-form" onsubmit="submitEditMotorcycle(event)">
+     <div class="space-y-4">
+      <div><label class="block text-sm font-semibold text-gray-700 mb-2">نام موتور سکیل</label> <input type="text" id="edit-motorcycle-name" class="input-field" placeholder="مثال: لمر" required>
+      </div>
+      <div><label class="block text-sm font-semibold text-gray-700 mb-2">رنگ</label> <input type="text" id="edit-motorcycle-color" class="input-field" placeholder="مثال: آبی" required>
+      </div>
+      <div><label class="block text-sm font-semibold text-gray-700 mb-2">پلاک</label> <input type="text" id="edit-motorcycle-plate" class="input-field" placeholder="مثال: TS-01" required>
+      </div>
+      <div><label class="block text-sm font-semibold text-gray-700 mb-2">دیپارتمنت</label> <input type="text" id="edit-motorcycle-department" class="input-field" placeholder="مثال: پاور" required>
+      </div>
+      <div class="flex gap-3 mt-6"><button type="submit" class="btn btn-success flex-1">✅ ذخیره تغییرات</button> <button type="button" class="btn btn-secondary flex-1" onclick="closeModal('edit-motorcycle-modal')">❌ انصراف</button>
+      </div>
+     </div>
+    </form>
+   </div>
+  </div>
   <div id="new-employee-modal" class="modal">
    <div class="modal-content">
     <h2 class="text-2xl font-bold text-gray-800 mb-6">افزودن کارمند جدید</h2>
@@ -137,5 +156,4 @@
   <script src="./googleSheets.js"></script>
   <script src="./index.js"></script>
  </body>
-
 </html>
