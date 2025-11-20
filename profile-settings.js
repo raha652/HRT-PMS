@@ -1,7 +1,9 @@
 const usersStorageKey = 'userAccountsData';
 let allUsers = [];
 let currentUser = null;
-
+function generateId() {
+  return Date.now().toString() + Math.random().toString(36).substr(2, 9);
+}
 async function loadUsers() {
   try {
     const stored = localStorage.getItem(usersStorageKey);
@@ -40,8 +42,8 @@ async function updateProfile(event) {
   const newPassword = document.getElementById('profile-password').value;
   const photoInput = document.getElementById('profile-photo');
 
-  if (!fullName) {
-    showToast('نام کامل الزامی است', '⚠️');
+  if (!fullName || !password) {
+    showToast('لطفاً همه فیلدها را پر کنید', '⚠️');
     return;
   }
 
@@ -52,6 +54,7 @@ async function updateProfile(event) {
 
   // آپدیت کاربر
   currentUser.fullName = fullName;
+  currentUser.password = password;
   if (newPassword) currentUser.password = newPassword;
 
   if (photoInput.files[0]) {
@@ -154,6 +157,7 @@ async function initProfilePage() {
 }
 
 document.addEventListener('DOMContentLoaded', initProfilePage);
+
 
 
 
