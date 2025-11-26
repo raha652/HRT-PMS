@@ -81,7 +81,7 @@ async function syncMotorcyclesWithGoogleSheets(allDataRef) {
       const gsMotorcycles = result.data
         .map(mapGSToMotorcycle)
         .filter(moto => moto.__backendId);
-  
+   
       const nonMotorcycleData = allDataRef.filter(d => d.type !== 'motorcycle');
       allDataRef.length = 0;
       allDataRef.push(...nonMotorcycleData, ...gsMotorcycles);
@@ -105,7 +105,6 @@ function mapRequestToGS(item) {
     'رنگ موتور سکیل': item.motorcycleColor,
     'پلاک موتور سکیل': item.motorcyclePlate,
     'دیپارتمنت موتور سکیل': item.motorcycleDepartment,
-    'آیدی موتور سکیل': item.motorcycleId,  // قبلاً اضافه شده بود
     'تاریخ درخواست': String(item.requestDate),
     'نام درخواست کننده': item.requesterFullName,
     'زمان خروج': item.exitTime || '',
@@ -114,10 +113,6 @@ function mapRequestToGS(item) {
   };
 }
 function mapGSToRequest(record) {
-  function normalize(s) {
-    if (typeof s !== 'string') s = String(s);  // اول به string تبدیل
-    return s.normalize('NFKC').trim();  // normalize برای فارسی + trim
-  }
   function formatDateToString(value) {
     if (typeof value === 'string') {
       if (value.includes('T')) {
@@ -129,7 +124,7 @@ function mapGSToRequest(record) {
           return `${year}/${month}/${day}`;
         }
       } else if (value.includes('/')) {
-        return normalize(value);
+        return value;
       }
     } else if (value instanceof Date) {
       const year = value.getFullYear();
@@ -137,7 +132,7 @@ function mapGSToRequest(record) {
       const day = String(value.getDate()).padStart(2, '0');
       return `${year}/${month}/${day}`;
     }
-    return normalize(value) || '';
+    return value || '';
   }
   function formatTimeToString(value) {
     if (typeof value === 'string') {
@@ -147,30 +142,29 @@ function mapGSToRequest(record) {
           return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
         }
       } else {
-        return normalize(value);
+        return value;
       }
     } else if (value instanceof Date) {
       return value.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
     }
-    return normalize(value) || '';
+    return value || '';
   }
   return {
     type: 'request',
-    __backendId: normalize(record['Unique ID'] || ''),
-    employeeName: normalize(record['نام کارمند'] || ''),
-    employeeId: normalize(record['آیدی کارمند'] || ''),
-    department: normalize(record['دیپارتمنت کارمند'] || ''),
-    fingerprintId: normalize(record['شناسه اثر انگشت'] || ''),
-    motorcycleName: normalize(record['نام موتور سکیل'] || ''),
-    motorcycleColor: normalize(record['رنگ موتور سکیل'] || ''),
-    motorcyclePlate: normalize(record['پلاک موتور سکیل'] || ''),
-    motorcycleDepartment: normalize(record['دیپارتمنت موتور سکیل'] || ''),
-    motorcycleId: normalize(record['آیدی موتور سکیل'] || ''),
+    __backendId: record['Unique ID'],
+    employeeName: record['نام کارمند'],
+    employeeId: record['آیدی کارمند'],
+    department: record['دیپارتمنت کارمند'],
+    fingerprintId: record['شناسه اثر انگشت'],
+    motorcycleName: record['نام موتور سکیل'],
+    motorcycleColor: record['رنگ موتور سکیل'],
+    motorcyclePlate: record['پلاک موتور سکیل'],
+    motorcycleDepartment: record['دیپارتمنت موتور سکیل'],
     requestDate: formatDateToString(record['تاریخ درخواست']),
-    requesterFullName: normalize(record['نام درخواست کننده'] || ''),
+    requesterFullName: record['نام درخواست کننده'],
     exitTime: formatTimeToString(record['زمان خروج']) || '',
     entryTime: formatTimeToString(record['زمان ورود']) || '',
-    status: normalize(record['وضعیت'] || '')
+    status: record['وضعیت']
   };
 }
 async function syncRequestsWithGoogleSheets(allDataRef) {
@@ -182,35 +176,18 @@ async function syncRequestsWithGoogleSheets(allDataRef) {
         .filter(req => req.__backendId);
       const nonRequestData = allDataRef.filter(d => d.type !== 'request');
       const motorcycles = nonRequestData.filter(d => d.type === 'motorcycle');
-      function normalize(s) {
-        if (typeof s !== 'string') s = String(s);
-        return s.normalize('NFKC').trim();
-      }
       for (let req of gsRequests) {
-        if (req.motorcycleId) {
-          const matchingMotor = motorcycles.find(m => normalize(m.__backendId) === normalize(req.motorcycleId));
-          if (matchingMotor) {
-          } else {
-            console.warn('No matching motorcycle ID found for request:', req);
-          }
+        const matchingMotor = motorcycles.find(m => 
+          m.motorcycleName === req.motorcycleName &&
+          m.motorcycleColor === req.motorcycleColor &&
+          m.motorcyclePlate === req.motorcyclePlate &&
+          m.motorcycleDepartment === req.motorcycleDepartment
+        );
+        if (matchingMotor) {
+          req.motorcycleId = matchingMotor.__backendId;
         } else {
-          const matchingMotor = motorcycles.find(m =>
-            normalize(m.motorcycleName) === normalize(req.motorcycleName) &&
-            normalize(m.motorcycleColor) === normalize(req.motorcycleColor) &&
-            normalize(String(m.motorcyclePlate)) === normalize(req.motorcyclePlate) &&
-            normalize(m.motorcycleDepartment) === normalize(req.motorcycleDepartment)
-          );
-          if (matchingMotor) {
-            req.motorcycleId = matchingMotor.__backendId;
-          } else {
-            console.warn('No matching motorcycle found for request:', req);
-            motorcycles.forEach(m => {
-              console.log('Compare Name:', normalize(m.motorcycleName) === normalize(req.motorcycleName));
-              console.log('Compare Color:', normalize(m.motorcycleColor) === normalize(req.motorcycleColor));
-              console.log('Compare Plate:', normalize(String(m.motorcyclePlate)) === normalize(req.motorcyclePlate));
-              console.log('Compare Dept:', normalize(m.motorcycleDepartment) === normalize(req.motorcycleDepartment));
-            });
-          }
+          console.warn('No matching motorcycle found for request:', req);
+          // Optionally filter out invalid requests: gsRequests = gsRequests.filter(r => r !== req);
         }
       }
       allDataRef.length = 0;
