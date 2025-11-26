@@ -125,7 +125,7 @@ function mapGSToRequest(record) {
           return `${year}/${month}/${day}`;
         }
       } else if (value.includes('/')) {
-        return value;
+        return String(value).trim();
       }
     } else if (value instanceof Date) {
       const year = value.getFullYear();
@@ -133,7 +133,7 @@ function mapGSToRequest(record) {
       const day = String(value.getDate()).padStart(2, '0');
       return `${year}/${month}/${day}`;
     }
-    return value ? value.trim() : '';  // trim اضافه شد
+    return String(value).trim() || '';
   }
   function formatTimeToString(value) {
     if (typeof value === 'string') {
@@ -143,30 +143,30 @@ function mapGSToRequest(record) {
           return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
         }
       } else {
-        return value.trim();  // trim اضافه شد
+        return String(value).trim();
       }
     } else if (value instanceof Date) {
       return value.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
     }
-    return value ? value.trim() : '';  // trim اضافه شد
+    return String(value).trim() || '';
   }
   return {
     type: 'request',
-    __backendId: record['Unique ID'] ? record['Unique ID'].trim() : '',
-    employeeName: record['نام کارمند'] ? record['نام کارمند'].trim() : '',
-    employeeId: record['آیدی کارمند'] ? record['آیدی کارمند'].trim() : '',
-    department: record['دیپارتمنت کارمند'] ? record['دیپارتمنت کارمند'].trim() : '',
-    fingerprintId: record['شناسه اثر انگشت'] ? record['شناسه اثر انگشت'].trim() : '',
-    motorcycleName: record['نام موتور سکیل'] ? record['نام موتور سکیل'].trim() : '',
-    motorcycleColor: record['رنگ موتور سکیل'] ? record['رنگ موتور سکیل'].trim() : '',
-    motorcyclePlate: record['پلاک موتور سکیل'] ? record['پلاک موتور سکیل'].trim() : '',
-    motorcycleDepartment: record['دیپارتمنت موتور سکیل'] ? record['دیپارتمنت موتور سکیل'].trim() : '',
-    motorcycleId: record['آیدی موتور سکیل'] ? record['آیدی موتور سکیل'].trim() : '',  // trim اضافه شد
+    __backendId: record['Unique ID'] ? String(record['Unique ID']).trim() : '',
+    employeeName: record['نام کارمند'] ? String(record['نام کارمند']).trim() : '',
+    employeeId: record['آیدی کارمند'] ? String(record['آیدی کارمند']).trim() : '',  // String اضافه شد برای safe trim
+    department: record['دیپارتمنت کارمند'] ? String(record['دیپارتمنت کارمند']).trim() : '',
+    fingerprintId: record['شناسه اثر انگشت'] ? String(record['شناسه اثر انگشت']).trim() : '',
+    motorcycleName: record['نام موتور سکیل'] ? String(record['نام موتور سکیل']).trim() : '',
+    motorcycleColor: record['رنگ موتور سکیل'] ? String(record['رنگ موتور سکیل']).trim() : '',
+    motorcyclePlate: record['پلاک موتور سکیل'] ? String(record['پلاک موتور سکیل']).trim() : '',
+    motorcycleDepartment: record['دیپارتمنت موتور سکیل'] ? String(record['دیپارتمنت موتور سکیل']).trim() : '',
+    motorcycleId: record['آیدی موتور سکیل'] ? String(record['آیدی موتور سکیل']).trim() : '',
     requestDate: formatDateToString(record['تاریخ درخواست']),
-    requesterFullName: record['نام درخواست کننده'] ? record['نام درخواست کننده'].trim() : '',
+    requesterFullName: record['نام درخواست کننده'] ? String(record['نام درخواست کننده']).trim() : '',
     exitTime: formatTimeToString(record['زمان خروج']) || '',
     entryTime: formatTimeToString(record['زمان ورود']) || '',
-    status: record['وضعیت'] ? record['وضعیت'].trim() : ''
+    status: record['وضعیت'] ? String(record['وضعیت']).trim() : ''
   };
 }
 async function syncRequestsWithGoogleSheets(allDataRef) {
@@ -190,10 +190,10 @@ async function syncRequestsWithGoogleSheets(allDataRef) {
         } else {
           // برای داده‌های قدیمی بدون ID، match قدیمی با trim
           const matchingMotor = motorcycles.find(m =>
-            m.motorcycleName.trim() === req.motorcycleName.trim() &&
-            m.motorcycleColor.trim() === req.motorcycleColor.trim() &&
-            String(m.motorcyclePlate).trim() === req.motorcyclePlate.trim() &&  // toString اضافه شد
-            m.motorcycleDepartment.trim() === req.motorcycleDepartment.trim()
+            String(m.motorcycleName).trim() === req.motorcycleName.trim() &&
+            String(m.motorcycleColor).trim() === req.motorcycleColor.trim() &&
+            String(m.motorcyclePlate).trim() === req.motorcyclePlate.trim() &&
+            String(m.motorcycleDepartment).trim() === req.motorcycleDepartment.trim()
           );
           if (matchingMotor) {
             req.motorcycleId = matchingMotor.__backendId;
@@ -201,10 +201,10 @@ async function syncRequestsWithGoogleSheets(allDataRef) {
             console.warn('No matching motorcycle found for request:', req);
             // log دقیق‌تر برای دیباگ: کدوم فیلد match نکرد
             motorcycles.forEach(m => {
-              console.log('Compare Name:', m.motorcycleName.trim() === req.motorcycleName.trim());
-              console.log('Compare Color:', m.motorcycleColor.trim() === req.motorcycleColor.trim());
+              console.log('Compare Name:', String(m.motorcycleName).trim() === req.motorcycleName.trim());
+              console.log('Compare Color:', String(m.motorcycleColor).trim() === req.motorcycleColor.trim());
               console.log('Compare Plate:', String(m.motorcyclePlate).trim() === req.motorcyclePlate.trim());
-              console.log('Compare Dept:', m.motorcycleDepartment.trim() === req.motorcycleDepartment.trim());
+              console.log('Compare Dept:', String(m.motorcycleDepartment).trim() === req.motorcycleDepartment.trim());
             });
             // Optionally filter out invalid requests: gsRequests = gsRequests.filter(r => r !== req);
           }
