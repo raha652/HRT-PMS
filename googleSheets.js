@@ -114,6 +114,10 @@ function mapRequestToGS(item) {
   };
 }
 function mapGSToRequest(record) {
+  function normalize(s) {
+    if (typeof s !== 'string') s = String(s);  // اول به string تبدیل
+    return s.normalize('NFKC').trim();  // normalize برای فارسی + trim
+  }
   function formatDateToString(value) {
     if (typeof value === 'string') {
       if (value.includes('T')) {
@@ -125,7 +129,7 @@ function mapGSToRequest(record) {
           return `${year}/${month}/${day}`;
         }
       } else if (value.includes('/')) {
-        return String(value).trim();
+        return normalize(value);
       }
     } else if (value instanceof Date) {
       const year = value.getFullYear();
@@ -133,7 +137,7 @@ function mapGSToRequest(record) {
       const day = String(value.getDate()).padStart(2, '0');
       return `${year}/${month}/${day}`;
     }
-    return String(value).trim() || '';
+    return normalize(value) || '';
   }
   function formatTimeToString(value) {
     if (typeof value === 'string') {
@@ -143,30 +147,30 @@ function mapGSToRequest(record) {
           return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
         }
       } else {
-        return String(value).trim();
+        return normalize(value);
       }
     } else if (value instanceof Date) {
       return value.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
     }
-    return String(value).trim() || '';
+    return normalize(value) || '';
   }
   return {
     type: 'request',
-    __backendId: record['Unique ID'] ? String(record['Unique ID']).trim() : '',
-    employeeName: record['نام کارمند'] ? String(record['نام کارمند']).trim() : '',
-    employeeId: record['آیدی کارمند'] ? String(record['آیدی کارمند']).trim() : '',  // String اضافه شد برای safe trim
-    department: record['دیپارتمنت کارمند'] ? String(record['دیپارتمنت کارمند']).trim() : '',
-    fingerprintId: record['شناسه اثر انگشت'] ? String(record['شناسه اثر انگشت']).trim() : '',
-    motorcycleName: record['نام موتور سکیل'] ? String(record['نام موتور سکیل']).trim() : '',
-    motorcycleColor: record['رنگ موتور سکیل'] ? String(record['رنگ موتور سکیل']).trim() : '',
-    motorcyclePlate: record['پلاک موتور سکیل'] ? String(record['پلاک موتور سکیل']).trim() : '',
-    motorcycleDepartment: record['دیپارتمنت موتور سکیل'] ? String(record['دیپارتمنت موتور سکیل']).trim() : '',
-    motorcycleId: record['آیدی موتور سکیل'] ? String(record['آیدی موتور سکیل']).trim() : '',
+    __backendId: normalize(record['Unique ID'] || ''),
+    employeeName: normalize(record['نام کارمند'] || ''),
+    employeeId: normalize(record['آیدی کارمند'] || ''),
+    department: normalize(record['دیپارتمنت کارمند'] || ''),
+    fingerprintId: normalize(record['شناسه اثر انگشت'] || ''),
+    motorcycleName: normalize(record['نام موتور سکیل'] || ''),
+    motorcycleColor: normalize(record['رنگ موتور سکیل'] || ''),
+    motorcyclePlate: normalize(record['پلاک موتور سکیل'] || ''),
+    motorcycleDepartment: normalize(record['دیپارتمنت موتور سکیل'] || ''),
+    motorcycleId: normalize(record['آیدی موتور سکیل'] || ''),
     requestDate: formatDateToString(record['تاریخ درخواست']),
-    requesterFullName: record['نام درخواست کننده'] ? String(record['نام درخواست کننده']).trim() : '',
+    requesterFullName: normalize(record['نام درخواست کننده'] || ''),
     exitTime: formatTimeToString(record['زمان خروج']) || '',
     entryTime: formatTimeToString(record['زمان ورود']) || '',
-    status: record['وضعیت'] ? String(record['وضعیت']).trim() : ''
+    status: normalize(record['وضعیت'] || '')
   };
 }
 async function syncRequestsWithGoogleSheets(allDataRef) {
@@ -178,35 +182,34 @@ async function syncRequestsWithGoogleSheets(allDataRef) {
         .filter(req => req.__backendId);
       const nonRequestData = allDataRef.filter(d => d.type !== 'request');
       const motorcycles = nonRequestData.filter(d => d.type === 'motorcycle');
+      function normalize(s) {
+        if (typeof s !== 'string') s = String(s);
+        return s.normalize('NFKC').trim();
+      }
       for (let req of gsRequests) {
         if (req.motorcycleId) {
-          // اگر ID مستقیم وجود داشته باشه (داده‌های جدید)، ازش استفاده کن
-          const matchingMotor = motorcycles.find(m => m.__backendId === req.motorcycleId.trim());  // trim اضافه شد
+          const matchingMotor = motorcycles.find(m => normalize(m.__backendId) === normalize(req.motorcycleId));
           if (matchingMotor) {
-            // اگر نیاز باشه، فیلدهای دیگه رو بروز کن
           } else {
             console.warn('No matching motorcycle ID found for request:', req);
           }
         } else {
-          // برای داده‌های قدیمی بدون ID، match قدیمی با trim
           const matchingMotor = motorcycles.find(m =>
-            String(m.motorcycleName).trim() === req.motorcycleName.trim() &&
-            String(m.motorcycleColor).trim() === req.motorcycleColor.trim() &&
-            String(m.motorcyclePlate).trim() === req.motorcyclePlate.trim() &&
-            String(m.motorcycleDepartment).trim() === req.motorcycleDepartment.trim()
+            normalize(m.motorcycleName) === normalize(req.motorcycleName) &&
+            normalize(m.motorcycleColor) === normalize(req.motorcycleColor) &&
+            normalize(String(m.motorcyclePlate)) === normalize(req.motorcyclePlate) &&
+            normalize(m.motorcycleDepartment) === normalize(req.motorcycleDepartment)
           );
           if (matchingMotor) {
             req.motorcycleId = matchingMotor.__backendId;
           } else {
             console.warn('No matching motorcycle found for request:', req);
-            // log دقیق‌تر برای دیباگ: کدوم فیلد match نکرد
             motorcycles.forEach(m => {
-              console.log('Compare Name:', String(m.motorcycleName).trim() === req.motorcycleName.trim());
-              console.log('Compare Color:', String(m.motorcycleColor).trim() === req.motorcycleColor.trim());
-              console.log('Compare Plate:', String(m.motorcyclePlate).trim() === req.motorcyclePlate.trim());
-              console.log('Compare Dept:', String(m.motorcycleDepartment).trim() === req.motorcycleDepartment.trim());
+              console.log('Compare Name:', normalize(m.motorcycleName) === normalize(req.motorcycleName));
+              console.log('Compare Color:', normalize(m.motorcycleColor) === normalize(req.motorcycleColor));
+              console.log('Compare Plate:', normalize(String(m.motorcyclePlate)) === normalize(req.motorcyclePlate));
+              console.log('Compare Dept:', normalize(m.motorcycleDepartment) === normalize(req.motorcycleDepartment));
             });
-            // Optionally filter out invalid requests: gsRequests = gsRequests.filter(r => r !== req);
           }
         }
       }
