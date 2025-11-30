@@ -20,15 +20,19 @@
        <p id="company-name" class="text-gray-300 mt-1">پارکینگ مرکزی</p>
       </div>
      </div>
-     <div class="flex items-center gap-4 relative">
-      <p id="current-user" class="text-lg font-bold text-white">---</p>
-      <div class="relative">
-       <div id="user-profile-icon" class="w-10 h-10 rounded-full bg-white bg-opacity-20 flex items-center justify-center cursor-pointer hover:bg-opacity-30 transition-all duration-200" onclick="toggleUserDropdown()">
-        👤
-       </div>
-      </div>
-      <button id="logout-btn-old" onclick="logout()" class="btn btn-secondary px-4 py-2 rounded text-sm hidden">خروج</button>
-     </div>
+<!-- اصلاح شده در index.html: تغییر ساختار برای قرار دادن position زیر نام کامل -->
+<div class="flex items-center gap-4 relative">
+  <div class="text-right"> <!-- div جدید برای عمودی کردن -->
+    <p id="current-user" class="text-lg font-bold text-white">---</p>
+    <p id="current-user-position" class="text-sm text-gray-100">---</p> <!-- فیلد جدید، حالا زیر قرار می‌گیرد -->
+  </div>
+  <div class="relative">
+    <div id="user-profile-icon" class="w-10 h-10 rounded-full bg-white bg-opacity-20 flex items-center justify-center cursor-pointer hover:bg-opacity-30 transition-all duration-200" onclick="toggleUserDropdown()">
+      👤
+    </div>
+  </div>
+  <button id="logout-btn-old" onclick="logout()" class="btn btn-secondary px-4 py-2 rounded text-sm hidden">خروج</button>
+</div>
     </div>
    </div>
 
