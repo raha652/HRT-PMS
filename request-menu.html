@@ -56,13 +56,13 @@
   </div>
   <div id="password-modal" class="modal">
    <div class="modal-content">
-    <h2 class="text-2xl font-bold text-gray-800 mb-6">🔐 احراز هویت</h2>
+    <h2 class="text-2xl font-bold text-gray-200 mb-6">🔐 احراز هویت</h2>
     <div class="mb-4 p-4 bg-gradient-to-r from-blue-50 to-purple-50 border border-blue-200 rounded-lg">
      <p id="password-message" class="text-sm text-blue-800">برای دسترسی به این بخش، رمز عبور را وارد کنید</p>
     </div>
     <form id="password-form" onsubmit="verifyPassword(event)">
      <div class="space-y-4">
-      <div><label class="block text-sm font-semibold text-gray-700 mb-2">رمز عبور</label> <input type="password" id="password-input" class="input-field" placeholder="رمز عبور را وارد کنید" required>
+      <div><label class="block text-sm font-semibold text-gray-200 mb-2">رمز عبور</label> <input type="password" id="password-input" class="input-field text-gray-800 mb-2" placeholder="رمز عبور را وارد کنید" required>
       </div>
       <div class="flex gap-3 mt-6"><button type="submit" class="btn btn-success flex-1">✅ تأیید</button> <button type="button" class="btn btn-secondary flex-1" onclick="closeModal('password-modal')">❌ انصراف</button>
       </div>
@@ -72,32 +72,32 @@
   </div>
   <div id="new-request-modal" class="modal">
    <div class="modal-content">
-    <h2 class="text-2xl font-bold text-gray-800 mb-6">درخواست جدید</h2>
+    <h2 class="text-2xl font-bold text-gray-200 mb-6">درخواست جدید</h2>
     <form id="new-request-form" onsubmit="submitNewRequest(event)">
      <div class="space-y-4">
-      <div><label class="block text-sm font-semibold text-gray-700 mb-2">انتخاب دیپارتمنت</label>
-       <div class="relative"><button type="button" id="department-select" class="input-field text-right cursor-pointer flex items-center justify-between" onclick="toggleDepartmentDropdown()"> <span id="department-display">دیپارتمنت را انتخاب کنید</span> <span>▼</span> </button>
-        <div id="department-dropdown" class="absolute top-full left-0 right-0 bg-white border border-gray-300 rounded-lg shadow-lg max-h-64 overflow-hidden z-10 hidden">
-         <div class="p-3 border-b border-gray-200"><input type="text" id="department-search" class="w-full p-2 border border-gray-300 rounded-md text-sm" placeholder="🔍 جستجو در دیپارتمنت‌ها..." oninput="searchDepartments()">
+      <div><label class="block text-sm font-semibold text-gray-200 mb-2">انتخاب دیپارتمنت</label>
+       <div class="relative"><button type="button" id="department-select" class="input-field text-right cursor-pointer flex items-center justify-between text-gray-800 mb-2" onclick="toggleDepartmentDropdown()"> <span id="department-display">دیپارتمنت را انتخاب کنید</span> <span>▼</span> </button>
+        <div id="department-dropdown" class="absolute top-full left-0 right-0 bg-white border border-gray-300 text-gray-800 mb-2 rounded-lg shadow-lg max-h-64 overflow-hidden z-10 hidden">
+         <div class="p-3 border-b border-gray-800"><input type="text" id="department-search" class="w-full p-2 border border-gray-400 rounded-md text-sm" placeholder="🔍 جستجو در دیپارتمنت‌ها..." oninput="searchDepartments()">
          </div>
          <div id="department-options" class="max-h-48 overflow-y-auto">
         </div><input type="hidden" id="selected-department" required>
        </div>
       </div>
-      <div><label class="block text-sm font-semibold text-gray-700 mb-2">انتخاب کارمند</label>
-       <div class="relative"><button type="button" id="employee-select" class="input-field text-right cursor-pointer flex items-center justify-between opacity-50" onclick="toggleEmployeeDropdown()" disabled> <span id="employee-display">ابتدا دیپارتمنت را انتخاب کنید</span> <span>▼</span> </button>
-        <div id="employee-dropdown" class="absolute top-full left-0 right-0 bg-white border border-gray-300 rounded-lg shadow-lg max-h-64 overflow-hidden z-10 hidden">
-         <div class="p-3 border-b border-gray-200"><input type="text" id="employee-search" class="w-full p-2 border border-gray-300 rounded-md text-sm" placeholder="🔍 جستجو در کارمندان..." oninput="searchEmployees()">
+      <div><label class="block text-sm font-semibold text-gray-200 mb-2">انتخاب کارمند</label>
+       <div class="relative"><button type="button" id="employee-select" class="input-field text-right cursor-pointer flex items-center justify-between opacity-50 text-gray-800 mb-2" onclick="toggleEmployeeDropdown()" disabled> <span id="employee-display">ابتدا دیپارتمنت را انتخاب کنید</span> <span>▼</span> </button>
+        <div id="employee-dropdown" class="absolute top-full left-0 right-0 bg-white border border-gray-300 text-gray-800 mb-2 rounded-lg shadow-lg max-h-64 overflow-hidden z-10 hidden">
+         <div class="p-3 border-b border-gray-800"><input type="text" id="employee-search" class="w-full p-2 border border-gray-300 rounded-md text-sm" placeholder="🔍 جستجو در کارمندان..." oninput="searchEmployees()">
          </div>
          <div id="employee-options" class="max-h-48 overflow-y-auto">
          </div>
         </div><input type="hidden" id="selected-employee" required>
        </div>
       </div>
-      <div><label class="block text-sm font-semibold text-gray-700 mb-2">انتخاب موتور سکیل</label>
-       <div class="relative"><button type="button" id="motorcycle-select" class="input-field text-right cursor-pointer flex items-center justify-between opacity-50" onclick="toggleMotorcycleDropdown()" disabled> <span id="motorcycle-display">ابتدا دیپارتمنت را انتخاب کنید</span> <span>▼</span> </button>
-        <div id="motorcycle-dropdown" class="absolute top-full left-0 right-0 bg-white border border-gray-300 rounded-lg shadow-lg max-h-64 overflow-hidden z-10 hidden">
-         <div class="p-3 border-b border-gray-200"><input type="text" id="motorcycle-search" class="w-full p-2 border border-gray-300 rounded-md text-sm" placeholder="🔍 جستجو در موتور سکیل‌ها..." oninput="searchMotorcycles()">
+      <div><label class="block text-sm font-semibold text-gray-200 mb-2">انتخاب موتور سکیل</label>
+       <div class="relative"><button type="button" id="motorcycle-select" class="input-field text-right cursor-pointer flex items-center justify-between opacity-50 text-gray-800 mb-2" onclick="toggleMotorcycleDropdown()" disabled> <span id="motorcycle-display">ابتدا دیپارتمنت را انتخاب کنید</span> <span>▼</span> </button>
+        <div id="motorcycle-dropdown" class="absolute top-full left-0 right-0 bg-white border border-gray-300 text-gray-800 mb-2 rounded-lg shadow-lg max-h-64 overflow-hidden z-10 hidden">
+         <div class="p-3 border-b border-gray-800"><input type="text" id="motorcycle-search" class="w-full p-2 border border-gray-400 rounded-md text-sm" placeholder="🔍 جستجو در موتور سکیل‌ها..." oninput="searchMotorcycles()">
          </div>
          <div id="motorcycle-options" class="max-h-48 overflow-y-auto">
          </div>
@@ -153,7 +153,4 @@
   <script src="./googleSheets.js"></script>
   <script src="./index.js"></script>
  </body>
-
 </html>
-
-
