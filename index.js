@@ -12,11 +12,13 @@ let allUsers = [];
 let currentRecordCount = 0;
 let currentPasswordType = '';
 let currentStatusFilter = 'all';
+let currentMotorcycleSearchTerm = '';
 let departments = [];
 let currentUserRole = '';
 let historySearchTerm = '';
 let historyFromDate = '';
 let historyToDate = '';
+let currentMotorcycleId = '';
 const JalaliDate = {
   g_days_in_month: [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31],
   j_days_in_month: [31, 31, 31, 31, 31, 31, 30, 30, 30, 30, 30, 29]
@@ -81,18 +83,44 @@ async function saveData(data) {
     showToast('خطا در ذخیره داده‌ها', '❌');
   }
 }
+
+// // نقشه‌برداری کاربر به ساختار Google Sheets
+// function mapUserToGS(user) {
+//   return {
+//     __backendId: user.__backendId,
+//     fullName: user.fullName,
+//     username: user.username,
+//     password: user.password, // هشدار: ذخیره رمز عبور ساده امن نیست، اما بر اساس کد موجود
+//     role: user.role,
+//     position: user.position || 'نامشخص' // اضافه کردن position با مقدار پیش‌فرض
+//   };
+// }
+
+// // نقشه‌برداری داده‌های Google Sheets به ساختار کاربر محلی
+// function mapGSToUser(gsData) {
+//   return {
+//     __backendId: gsData.__backendId,
+//     fullName: gsData.fullName,
+//     username: gsData.username,
+//     password: gsData.password,
+//     role: gsData.role,
+//     position: gsData.position // اضافه کردن position
+//   };
+// }
+
 async function loadUsers() {
   try {
     const stored = localStorage.getItem(usersStorageKey);
     allUsers = stored && stored !== 'undefined' ? JSON.parse(stored) : [];
     if (allUsers.length === 0) {
-      const defaultAdmin = {
-        __backendId: generateId(),
-        fullName: 'شهاب حمیدی',
-        username: 'admin',
-        password: 'admin123',
-        role: 'admin'
-      };
+const defaultAdmin = {
+  __backendId: generateId(),
+  fullName: 'شهاب حمیدی',
+  username: 'admin',
+  password: 'admin123',
+  role: 'admin',
+  position: 'Electrical ENG' // موقعیت شغلی پیش‌فرض برای ادمین
+};
       allUsers.push(defaultAdmin);
       await saveUsers();
     }
@@ -124,9 +152,9 @@ async function createUser(userData) {
     return { isOk: false };
   }
   userData.__backendId = generateId();
-  allUsers.push(userData);
+  allUsers.push(userData); // شامل position
   await saveUsers(allUsers);
-  const gsData = mapUserToGS(userData);
+  const gsData = mapUserToGS(userData); // map باید position را شامل شود
   const gsResult = await callGoogleSheets('create', 'accounts', gsData);
   if (!gsResult.success) {
     showToast('خطا در ذخیره اکانت در Google Sheets', '❌');
@@ -193,13 +221,14 @@ async function syncUsersWithGoogleSheets() {
         .filter(user => user.__backendId);
       const defaultAdminExists = gsUsers.some(u => u.username === 'admin');
       if (!defaultAdminExists) {
-        const defaultAdmin = {
-          __backendId: generateId(),
-          fullName: 'شهاب حمیدی',
-          username: 'admin',
-          password: 'admin123',
-          role: 'admin'
-        };
+const defaultAdmin = {
+  __backendId: generateId(),
+  fullName: 'شهاب حمیدی',
+  username: 'admin',
+  password: 'admin123',
+  role: 'admin',
+  position: 'Electrical ENG' // موقعیت شغلی پیش‌فرض برای ادمین
+};
         gsUsers.push(defaultAdmin);
       }
       allUsers = gsUsers;
@@ -447,6 +476,7 @@ function renderAccounts() {
               <h3 class="text-lg font-bold text-white">${user.fullName}</h3>
               <p class="text-gray-200 mt-1">نام کاربری: ${user.username}</p>
               <p class="text-gray-200 mt-1">نقش: ${user.role === 'admin' ? 'ادمین' : 'کاربر'}</p>
+              <p class="text-gray-200 mt-1">موقعیت شغلی: ${user.position || 'نامشخص'}</p> <!-- نمایش موقعیت شغلی -->
             </div>
           </div>
           ${actionButtons}
@@ -488,11 +518,12 @@ async function submitNewAccount(event) {
   const username = document.getElementById('account-username').value.trim();
   const password = document.getElementById('account-password').value;
   const role = document.getElementById('account-role').value;
-  if (!fullName || !username || !password || !role) {
+  const position = document.getElementById('account-position').value.trim(); // فیلد جدید
+  if (!fullName || !username || !password || !role || !position) { // چک position
     showToast('لطفاً همه فیلدها را پر کنید', '⚠️');
     return;
   }
-  const result = await createUser({ fullName, username, password, role });
+  const result = await createUser({ fullName, username, password, role, position }); // اضافه کردن position
   if (result.isOk) {
     showToast('اکانت با موفقیت اضافه شد', '✅');
     closeModal('new-account-modal');
@@ -542,9 +573,12 @@ async function initApp() {
   currentUserRole = currentUser.role;
   session.fullName = currentUser.fullName;
   localStorage.setItem('session', JSON.stringify(session));
-  if (document.getElementById('current-user')) {
-    document.getElementById('current-user').textContent = currentUser.fullName || "کاربر ناشناس";
-  }
+if (document.getElementById('current-user')) {
+  document.getElementById('current-user').textContent = currentUser.fullName || "کاربر ناشناس";
+}
+if (document.getElementById('current-user-position')) {
+  document.getElementById('current-user-position').textContent = currentUser.position || "نامشخص"; // ست موقعیت شغلی
+}
   const userIcon = document.getElementById('user-profile-icon');
   if (userIcon) {
     if (currentUser.photo) {
@@ -605,6 +639,18 @@ async function initApp() {
     }
   }
   updateCurrentPage();
+const searchInput = document.getElementById('motorcycle-status-search');
+const searchBtn = document.getElementById('motorcycle-status-search-btn');
+if (searchBtn && searchInput) {
+  searchInput.addEventListener('input', (e) => {
+    currentMotorcycleSearchTerm = e.target.value.trim();
+    updateCurrentPage();
+  });
+  searchBtn.addEventListener('click', () => {
+    currentMotorcycleSearchTerm = searchInput.value.trim();
+    updateCurrentPage();
+  });
+}
   setupIdleLogout();
 }
 function setupIdleLogout() {
@@ -713,7 +759,8 @@ function renderMotorcycles(motorcycles) {
     return;
   }
   container.innerHTML = motorcycles.map(motorcycle => `
-    <div class="card p-6">
+    <div class="card p-6 cursor-pointer hover:shadow-2xl transition-all duration-300"
+         onclick="showMotorcycleDetails('${motorcycle.__backendId}')">
       <div class="flex items-center gap-4 mb-4">
         <div class="motorcycle-icon">
           🏍️
@@ -723,10 +770,6 @@ function renderMotorcycles(motorcycles) {
           <p class="text-gray-200">🎨 ${motorcycle.motorcycleColor}</p>
           <p class="text-sm text-gray-200 font-semibold">🏢 ${motorcycle.motorcycleDepartment}</p>
         </div>
-        <div class="flex gap-2">
-          <button class="btn btn-primary" onclick="openEditMotorcycleModal('${motorcycle.__backendId}')">✏️ ویرایش</button>
-          <button class="delete-btn" onclick="deleteMotorcycle('${motorcycle.__backendId}')">🗑️ حذف</button>
-        </div>
       </div>
       <div class="border-t border-gray-600 pt-4">
         <p class="text-sm text-gray-100">🔢 پلاک: ${motorcycle.motorcyclePlate}</p>
@@ -734,6 +777,99 @@ function renderMotorcycles(motorcycles) {
     </div>
   `).join('');
 }
+
+function showMotorcycleDetails(motorcycleId) {
+  const motorcycle = allData.find(d => d.__backendId === motorcycleId);
+  if (!motorcycle) {
+    showToast('موتور سکیل یافت نشد', '❌');
+    return;
+  }
+  currentMotorcycleId = motorcycleId;
+  const activeRequest = allData.find(r =>
+    r.type === 'request' &&
+    r.motorcycleId === motorcycle.__backendId &&
+    (r.status === 'pending' || r.status === 'active')
+  );
+  let statusHtml = '';
+  if (!activeRequest) {
+    statusHtml = `
+      <div class="bg-green-100 border border-green-200 p-3 rounded-lg text-sm">
+        <p class="text-green-800 font-bold">🅿️ موجود در پارکینگ</p>
+      </div>
+    `;
+  } else if (activeRequest.status === 'pending') {
+    statusHtml = `
+      <div class="bg-yellow-100 border border-yellow-200 p-3 rounded-lg text-sm">
+        <p class="text-yellow-800 font-bold">⏳ در انتظار خروج</p>
+        <p class="text-xs text-yellow-700 mt-1">👤 ${activeRequest.employeeName}</p>
+      </div>
+    `;
+  } else {
+    statusHtml = `
+      <div class="bg-red-100 border border-red-200 p-3 rounded-lg text-sm">
+        <p class="text-red-800 font-bold">🔄 در حال استفاده</p>
+        <p class="text-xs text-red-700 mt-1">👤 ${activeRequest.employeeName}</p>
+        ${activeRequest.exitTime ? `<p class="text-xs text-red-600">🚀 زمان خروج: ${activeRequest.exitTime}</p>` : ''}
+      </div>
+    `;
+  }
+  let photoHtml = motorcycle.motorcyclePhoto ?
+    `<img src="${motorcycle.motorcyclePhoto}" alt="عکس موتور سکیل" class="w-full h-48 object-contain rounded-lg mb-4">` :
+    `<div class="motorcycle-icon-large mb-4">🏍️</div>`;
+  const licenseHtml = motorcycle.motorcycleLicense ? `<tr><td class="px-4 py-2 font-semibold">نمبر جواز سیر</td><td class="px-4 py-2">${motorcycle.motorcycleLicense}</td></tr>` : '';
+  const gpsStatusHtml = motorcycle.motorcycleGpsStatus ? `<tr><td class="px-4 py-2 font-semibold">وضعیت جی پی اس</td><td class="px-4 py-2">${motorcycle.motorcycleGpsStatus}</td></tr>` : '';
+  const documentsButton = motorcycle.motorcycleDocuments ? `<button class="btn btn-secondary text-xs py-1 px-2 ml-2" onclick="window.open('${motorcycle.motorcycleDocuments}', '_blank')">نمایش اسناد</button>` : '';
+  const content = `
+    <div class="flex flex-col items-center">
+      ${photoHtml}
+      <h3 class="text-2xl font-bold text-white mb-4">${motorcycle.motorcycleName}</h3>
+      <div class="w-full overflow-x-auto">
+        <table class="min-w-full bg-gray-800 border border-gray-600 rounded-lg shadow-md table-beauty">
+          <thead class="bg-gray-700">
+            <th class="px-4 py-2 text-right font-semibold text-white"/>مشخصات موتور سیکلت<th>
+          </thead>
+          <tbody>
+            <tr><td class="px-4 py-2 font-semibold text-gray-300">رنگ</td><td class="px-4 py-2 text-gray-200">${motorcycle.motorcycleColor}</td></tr>
+            <tr><td class="px-4 py-2 font-semibold text-gray-300">آیدی</td><td class="px-4 py-2 text-gray-200">${motorcycle.motorcycleId}</td></tr>
+            <tr><td class="px-4 py-2 font-semibold text-gray-300">شماره پلاک</td><td class="px-4 py-2 text-gray-200">${motorcycle.motorcyclePlate}</td></tr>
+            ${licenseHtml}
+            <tr><td class="px-4 py-2 font-semibold text-gray-300">نوعیت اسناد</td><td class="px-4 py-2 text-gray-200">${motorcycle.motorcycleDocumentType}</td></tr>
+            <tr><td class="px-4 py-2 font-semibold text-gray-300">نمبر شاسی</td><td class="px-4 py-2 text-gray-200">${motorcycle.motorcycleChassisNumber}</td></tr>
+            <tr><td class="px-4 py-2 font-semibold text-gray-300">نمبر انجین</td><td class="px-4 py-2 text-gray-200">${motorcycle.motorcycleEngineNumber}</td></tr>
+            <tr><td class="px-4 py-2 font-semibold text-gray-300">جی پی اس</td><td class="px-4 py-2 text-gray-200">${motorcycle.motorcycleGps}</td></tr>
+            ${gpsStatusHtml}
+            <tr><td class="px-4 py-2 font-semibold text-gray-300">دیپارتمنت</td><td class="px-4 py-2 text-gray-200">${motorcycle.motorcycleDepartment}</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="mt-4 w-full flex items-stretch gap-2">
+        <div class="flex-1">
+          ${statusHtml}
+        </div>
+        <div class="flex-1 flex items-center justify-center">
+          ${documentsButton}
+        </div>
+      </div>
+      <div class="mt-4 p-3 bg-blue-900 text-white rounded-lg w-full">
+        <p class="text-blue-300 font-semibold">🆔 شناسه:</p>
+        <p class="text-sm text-blue-200 font-mono">${motorcycleId}</p>
+      </div>
+    </div>
+  `;
+  document.getElementById('motorcycle-details-content').innerHTML = content;
+  document.getElementById('motorcycle-details-modal').classList.add('active');
+  // اتصال دکمه ویرایش
+  document.getElementById('edit-from-details-btn').onclick = () => {
+    closeModal('motorcycle-details-modal');
+    openEditMotorcycleModal(motorcycleId);
+  };
+  // اتصال دکمه حذف
+  document.getElementById('delete-from-details-btn').onclick = () => {
+    deleteMotorcycle(motorcycleId);
+    closeModal('motorcycle-details-modal');
+  };
+}
+
 function renderEmployees(employees) {
   const container = document.getElementById('employees-list');
   if (!container) return;
@@ -849,9 +985,15 @@ function renderMotorcycleStatus(motorcycles, requests) {
   if (document.getElementById('pending-count')) document.getElementById('pending-count').textContent = pendingCount;
   if (document.getElementById('in-use-count')) document.getElementById('in-use-count').textContent = inUseCount;
   // Apply current filter
-  const filteredData = currentStatusFilter === 'all' ?
+  let filteredData = currentStatusFilter === 'all' ?
     motorcycleStatusData :
     motorcycleStatusData.filter(data => data.status === currentStatusFilter);
+if (currentMotorcycleSearchTerm) {
+  filteredData = filteredData.filter(data => 
+    data.motorcycle.motorcycleName.toLowerCase().includes(currentMotorcycleSearchTerm.toLowerCase()) ||
+    data.motorcycle.motorcycleDepartment.toLowerCase().includes(currentMotorcycleSearchTerm.toLowerCase())
+  );
+}
   // Update filtered count
     document.getElementById('filtered-count').textContent = filteredData.length;
   if (filteredData.length === 0) {
@@ -873,7 +1015,7 @@ function renderMotorcycleStatus(motorcycles, requests) {
         <div class="flex-1">
           <h3 class="text-lg font-bold text-white">${data.motorcycle.motorcycleName}</h3>
           <p class="text-gray-300">🎨 ${data.motorcycle.motorcycleColor}</p>
-          <p class="text-sm text-gray-200 font-semibold">🏢 ${data.motorcycle.motorcycleDepartment}</p>
+          <p class="text-sm text-gray-100 font-semibold">🏢 ${data.motorcycle.motorcycleDepartment}</p>
         </div>
         <div class="text-center">
           <div class="text-3xl mb-1">${data.statusIcon}</div>
@@ -881,16 +1023,21 @@ function renderMotorcycleStatus(motorcycles, requests) {
         </div>
       </div>
       <div class="border-t border-gray-600 pt-4">
-        <p class="text-sm text-gray-300 mb-2">🔢 پلاک: ${data.motorcycle.motorcyclePlate}</p>
-        ${data.employeeInfo ? `<p class="text-sm text-gray-300 mb-2">${data.employeeInfo}</p>` : ''}
-        ${data.activeRequest && data.activeRequest.requestDate ? `<p class="text-xs text-gray-400">📅 ${data.activeRequest.requestDate}</p>` : ''}
-        ${data.activeRequest && data.activeRequest.exitTime ? `<p class="text-xs text-gray-400">🚀 خروج: ${data.activeRequest.exitTime}</p>` : ''}
+        <p class="text-sm text-gray-100 mb-2">🔢 پلاک: ${data.motorcycle.motorcyclePlate}</p>
+        ${data.employeeInfo ? `<p class="text-sm text-gray-100 mb-2">${data.employeeInfo}</p>` : ''}
+        ${data.activeRequest && data.activeRequest.requestDate ? `<p class="text-xs text-gray-100">📅 ${data.activeRequest.requestDate}</p>` : ''}
+        ${data.activeRequest && data.activeRequest.exitTime ? `<p class="text-xs text-gray-100">🚀 خروج: ${data.activeRequest.exitTime}</p>` : ''}
       </div>
     </div>
   `).join('');
 }
 function filterMotorcycleStatus(filter) {
   currentStatusFilter = filter;
+  document.querySelectorAll('[id^="filter-"]').forEach(btn => btn.classList.remove('active-filter'));
+  const selectedBtn = document.getElementById(`filter-${filter}`);
+  if (selectedBtn) {
+    selectedBtn.classList.add('active-filter');
+  }
   updateCurrentPage();
 }
 function filterHistory(completedRequests) {
@@ -1012,18 +1159,25 @@ function updateModalSelects(employees, motorcycles) {
   availableDepartments = ['متفرقه', ...uniqueDepts];
   populateDepartmentDropdown();
 }
+
+
 function populateEmployeeDropdown() {
   const searchTerm = document.getElementById('employee-search').value.toLowerCase();
   const filteredEmployees = availableEmployees.filter(emp =>
     emp.employeeName.toLowerCase().includes(searchTerm) ||
-    emp.employeeId.toLowerCase().includes(searchTerm)
+    String(emp.employeeId).toLowerCase().includes(searchTerm)
   );
   const optionsContainer = document.getElementById('employee-options');
   if (!optionsContainer) return;
+  if (filteredEmployees.length === 0) {
+    optionsContainer.innerHTML = '<div class="p-3 text-gray-500 text-center">هیچ کارمندی یافت نشد</div>';
+    return;
+  }
   optionsContainer.innerHTML = filteredEmployees.map(emp =>
     `<div class="p-3 hover:bg-gray-100 cursor-pointer border-b border-gray-100 last:border-b-0" onclick="selectEmployee('${emp.__backendId}', '${emp.employeeName} - ${emp.employeeId}')">${emp.employeeName} - ${emp.employeeId}</div>`
   ).join('');
 }
+
 function searchEmployees() {
   populateEmployeeDropdown();
 }
@@ -1048,6 +1202,7 @@ function selectEmployee(employeeId, employeeText) {
   document.getElementById('selected-employee').value = employeeId;
   document.getElementById('employee-dropdown').classList.add('hidden');
 }
+
 function populateMotorcycleDropdown() {
   const optionsContainer = document.getElementById('motorcycle-options');
   if (!optionsContainer) return;
@@ -1064,6 +1219,7 @@ function populateMotorcycleDropdown() {
     `<div class="p-3 hover:bg-gray-100 cursor-pointer border-b border-gray-100 last:border-b-0" onclick="selectMotorcycle('${moto.__backendId}', '${moto.motorcycleName} - ${moto.motorcycleColor} - ${moto.motorcycleDepartment}')">${moto.motorcycleName} - ${moto.motorcycleColor} - ${moto.motorcycleDepartment}</div>`
   ).join('');
 }
+
 function searchMotorcycles() {
   const searchTerm = document.getElementById('motorcycle-search').value.toLowerCase();
   const activeRequests = allData.filter(d => d.type === 'request' && (d.status === 'pending' || d.status === 'active'));
@@ -1074,7 +1230,7 @@ function searchMotorcycles() {
   const filteredMotorcycles = availableMotorcyclesForRequest.filter(moto =>
     moto.motorcycleName.toLowerCase().includes(searchTerm) ||
     moto.motorcycleColor.toLowerCase().includes(searchTerm) ||
-    moto.motorcyclePlate.toLowerCase().includes(searchTerm)
+    String(moto.motorcyclePlate).toLowerCase().includes(searchTerm)
   );
   const optionsContainer = document.getElementById('motorcycle-options');
   if (!optionsContainer) return;
@@ -1086,6 +1242,7 @@ function searchMotorcycles() {
     `<div class="p-3 hover:bg-gray-100 cursor-pointer border-b border-gray-100 last:border-b-0" onclick="selectMotorcycle('${moto.__backendId}', '${moto.motorcycleName} - ${moto.motorcycleColor} - ${moto.motorcycleDepartment}')">${moto.motorcycleName} - ${moto.motorcycleColor} - ${moto.motorcycleDepartment}</div>`
   ).join('');
 }
+
 function toggleMotorcycleDropdown() {
   if (document.getElementById('motorcycle-select').disabled) return;
   const dropdown = document.getElementById('motorcycle-dropdown');
@@ -1161,6 +1318,8 @@ function openNewRequestModal() {
   populateDepartmentDropdown();
 }
 function openNewMotorcycleModal() {
+  toggleLicenseField();
+  toggleGpsStatusField();
   document.getElementById('new-motorcycle-modal').classList.add('active');
 }
 function openNewEmployeeModal() {
@@ -1171,9 +1330,20 @@ function openEditMotorcycleModal(motorcycleId) {
   if (!motorcycle) return;
   document.getElementById('edit-motorcycle-name').value = motorcycle.motorcycleName;
   document.getElementById('edit-motorcycle-color').value = motorcycle.motorcycleColor;
+  document.getElementById('edit-motorcycle-id').value = motorcycle.motorcycleId;
   document.getElementById('edit-motorcycle-plate').value = motorcycle.motorcyclePlate;
+  document.getElementById('edit-motorcycle-document-type').value = motorcycle.motorcycleDocumentType;
+  document.getElementById('edit-motorcycle-license').value = motorcycle.motorcycleLicense || '';
+  document.getElementById('edit-motorcycle-chassis-number').value = motorcycle.motorcycleChassisNumber || '';
+  document.getElementById('edit-motorcycle-engine-number').value = motorcycle.motorcycleEngineNumber || '';
+  document.getElementById('edit-motorcycle-gps').value = motorcycle.motorcycleGps || '';
+  document.getElementById('edit-motorcycle-gps-status').value = motorcycle.motorcycleGpsStatus || '';
   document.getElementById('edit-motorcycle-department').value = motorcycle.motorcycleDepartment;
+  document.getElementById('edit-motorcycle-photo').value = motorcycle.motorcyclePhoto || '';
+  document.getElementById('edit-motorcycle-documents').value = motorcycle.motorcycleDocuments || '';
   document.getElementById('edit-motorcycle-form').dataset.id = motorcycleId;
+  toggleEditLicenseField();
+  toggleEditGpsStatusField();
   document.getElementById('edit-motorcycle-modal').classList.add('active');
 }
 function openEditEmployeeModal(employeeId) {
@@ -1275,12 +1445,26 @@ async function submitNewMotorcycle(event) {
   }
   const form = event.target;
   form.classList.add('loading');
+  const documentType = document.getElementById('motorcycle-document-type').value;
+  const licenseNumber = documentType === 'جواز سیر' ? document.getElementById('motorcycle-license').value : '';
+  const gps = document.getElementById('motorcycle-gps').value;
+  const gpsStatus = gps === 'دارد' ? document.getElementById('motorcycle-gps-status').value : '';
+  const documents = document.getElementById('motorcycle-documents').value || '';
   const motorcycleData = {
     type: 'motorcycle',
     motorcycleName: document.getElementById('motorcycle-name').value,
     motorcycleColor: document.getElementById('motorcycle-color').value,
+    motorcycleId: document.getElementById('motorcycle-id').value,
     motorcyclePlate: document.getElementById('motorcycle-plate').value,
-    motorcycleDepartment: document.getElementById('motorcycle-department').value
+    motorcycleDocumentType: documentType,
+    motorcycleLicense: licenseNumber,
+    motorcycleChassisNumber: document.getElementById('motorcycle-chassis-number').value,
+    motorcycleEngineNumber: document.getElementById('motorcycle-engine-number').value,
+    motorcycleGps: gps,
+    motorcycleGpsStatus: gpsStatus,
+    motorcycleDepartment: document.getElementById('motorcycle-department').value,
+    motorcyclePhoto: document.getElementById('motorcycle-photo').value || '',
+    motorcycleDocuments: documents
   };
   const result = await window.dataSdk.create(motorcycleData);
   form.classList.remove('loading');
@@ -1288,6 +1472,8 @@ async function submitNewMotorcycle(event) {
     showToast('موتور سکیل با موفقیت اضافه شد', '✅');
     closeModal('new-motorcycle-modal');
     form.reset();
+    toggleLicenseField();
+    toggleGpsStatusField();
   } else {
     showToast('خطا در افزودن موتور سکیل', '❌');
   }
@@ -1298,12 +1484,26 @@ async function submitEditMotorcycle(event) {
   const motorcycleId = form.dataset.id;
   const motorcycle = allData.find(d => d.__backendId === motorcycleId);
   if (!motorcycle) return;
+  const documentType = document.getElementById('edit-motorcycle-document-type').value;
+  const licenseNumber = documentType === 'جواز سیر' ? document.getElementById('edit-motorcycle-license').value : '';
+  const gps = document.getElementById('edit-motorcycle-gps').value;
+  const gpsStatus = gps === 'دارد' ? document.getElementById('edit-motorcycle-gps-status').value : '';
+  const documents = document.getElementById('edit-motorcycle-documents').value || motorcycle.motorcycleDocuments;
   const updatedMotorcycle = {
     ...motorcycle,
     motorcycleName: document.getElementById('edit-motorcycle-name').value,
     motorcycleColor: document.getElementById('edit-motorcycle-color').value,
+    motorcycleId: document.getElementById('edit-motorcycle-id').value,
     motorcyclePlate: document.getElementById('edit-motorcycle-plate').value,
-    motorcycleDepartment: document.getElementById('edit-motorcycle-department').value
+    motorcycleDocumentType: documentType,
+    motorcycleLicense: licenseNumber,
+    motorcycleChassisNumber: document.getElementById('edit-motorcycle-chassis-number').value,
+    motorcycleEngineNumber: document.getElementById('edit-motorcycle-engine-number').value,
+    motorcycleGps: gps,
+    motorcycleGpsStatus: gpsStatus,
+    motorcycleDepartment: document.getElementById('edit-motorcycle-department').value,
+    motorcyclePhoto: document.getElementById('edit-motorcycle-photo').value || '',
+    motorcycleDocuments: documents
   };
   const result = await window.dataSdk.update(updatedMotorcycle);
   if (result.isOk) {
@@ -1313,6 +1513,22 @@ async function submitEditMotorcycle(event) {
   } else {
     showToast('خطا در ویرایش موتور سکیل', '❌');
   }
+}
+function toggleLicenseField() {
+  const documentType = document.getElementById('motorcycle-document-type').value;
+  document.getElementById('license-number-field').style.display = documentType === 'جواز سیر' ? 'block' : 'none';
+}
+function toggleGpsStatusField() {
+  const gps = document.getElementById('motorcycle-gps').value;
+  document.getElementById('gps-status-field').style.display = gps === 'دارد' ? 'block' : 'none';
+}
+function toggleEditLicenseField() {
+  const documentType = document.getElementById('edit-motorcycle-document-type').value;
+  document.getElementById('edit-license-number-field').style.display = documentType === 'جواز سیر' ? 'block' : 'none';
+}
+function toggleEditGpsStatusField() {
+  const gps = document.getElementById('edit-motorcycle-gps').value;
+  document.getElementById('edit-gps-status-field').style.display = gps === 'دارد' ? 'block' : 'none';
 }
 async function submitNewEmployee(event) {
   event.preventDefault();
@@ -1475,6 +1691,3 @@ document.addEventListener('DOMContentLoaded', initApp);
 if (window.location.hostname !== '127.0.0.1' && window.location.hostname !== 'localhost') {
   (function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'99bbf8eb8072d381',t:'MTc2MjY3NzI4MC4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();
 }
-
-
-
