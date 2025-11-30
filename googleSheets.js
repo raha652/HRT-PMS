@@ -60,8 +60,17 @@ function mapMotorcycleToGS(item) {
     'Unique ID': item.__backendId,
     'نام موتور سکیل': item.motorcycleName,
     'رنگ': item.motorcycleColor,
+    'آیدی': item.motorcycleId,
     'پلاک': item.motorcyclePlate,
-    'دیپارتمنت': item.motorcycleDepartment
+    'نوعیت اسناد': item.motorcycleDocumentType,
+    'نمبر جواز سیر': item.motorcycleLicense || '',
+    'نمبر شاسی': item.motorcycleChassisNumber,
+    'نمبر انجین': item.motorcycleEngineNumber,
+    'جی پی اس': item.motorcycleGps,
+    'وضعیت جی پی اس': item.motorcycleGpsStatus || '',
+    'دیپارتمنت': item.motorcycleDepartment,
+    'URL عکس': item.motorcyclePhoto || '',
+    'URL اسناد': item.motorcycleDocuments || ''
   };
 }
 function mapGSToMotorcycle(record) {
@@ -70,8 +79,17 @@ function mapGSToMotorcycle(record) {
     __backendId: record['Unique ID'],
     motorcycleName: record['نام موتور سکیل'],
     motorcycleColor: record['رنگ'],
+    motorcycleId: record['آیدی'],
     motorcyclePlate: record['پلاک'],
-    motorcycleDepartment: record['دیپارتمنت']
+    motorcycleDocumentType: record['نوعیت اسناد'],
+    motorcycleLicense: record['نمبر جواز سیر'] || '',
+    motorcycleChassisNumber: record['نمبر شاسی'],
+    motorcycleEngineNumber: record['نمبر انجین'],
+    motorcycleGps: record['جی پی اس'],
+    motorcycleGpsStatus: record['وضعیت جی پی اس'] || '',
+    motorcycleDepartment: record['دیپارتمنت'],
+    motorcyclePhoto: record['URL عکس'] || '',
+    motorcycleDocuments: record['URL اسناد'] || ''
   };
 }
 async function syncMotorcyclesWithGoogleSheets(allDataRef) {
@@ -81,7 +99,7 @@ async function syncMotorcyclesWithGoogleSheets(allDataRef) {
       const gsMotorcycles = result.data
         .map(mapGSToMotorcycle)
         .filter(moto => moto.__backendId);
-   
+ 
       const nonMotorcycleData = allDataRef.filter(d => d.type !== 'motorcycle');
       allDataRef.length = 0;
       allDataRef.push(...nonMotorcycleData, ...gsMotorcycles);
@@ -177,7 +195,7 @@ async function syncRequestsWithGoogleSheets(allDataRef) {
       const nonRequestData = allDataRef.filter(d => d.type !== 'request');
       const motorcycles = nonRequestData.filter(d => d.type === 'motorcycle');
       for (let req of gsRequests) {
-        const matchingMotor = motorcycles.find(m => 
+        const matchingMotor = motorcycles.find(m =>
           m.motorcycleName === req.motorcycleName &&
           m.motorcycleColor === req.motorcycleColor &&
           m.motorcyclePlate === req.motorcyclePlate &&
@@ -207,7 +225,8 @@ function mapUserToGS(item) {
     'نام کامل': item.fullName,
     'نام کاربری': item.username,
     'رمز عبور': item.password,
-    'نقش': item.role
+    'نقش': item.role,
+    'موقعیت شغلی': item.position || 'نامشخص'  
   };
 }
 function mapGSToUser(record) {
@@ -216,6 +235,7 @@ function mapGSToUser(record) {
     fullName: record['نام کامل'],
     username: record['نام کاربری'],
     password: record['رمز عبور'],
-    role: record['نقش']
+    role: record['نقش'],
+    position: record['موقعیت شغلی'] || 'نامشخص'  
   };
 }
