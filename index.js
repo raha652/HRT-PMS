@@ -83,31 +83,28 @@ async function saveData(data) {
     showToast('خطا در ذخیره داده‌ها', '❌');
   }
 }
-
 // // نقشه‌برداری کاربر به ساختار Google Sheets
 // function mapUserToGS(user) {
-//   return {
-//     __backendId: user.__backendId,
-//     fullName: user.fullName,
-//     username: user.username,
-//     password: user.password, // هشدار: ذخیره رمز عبور ساده امن نیست، اما بر اساس کد موجود
-//     role: user.role,
-//     position: user.position || 'نامشخص' // اضافه کردن position با مقدار پیش‌فرض
-//   };
+// return {
+// __backendId: user.__backendId,
+// fullName: user.fullName,
+// username: user.username,
+// password: user.password, // هشدار: ذخیره رمز عبور ساده امن نیست، اما بر اساس کد موجود
+// role: user.role,
+// position: user.position || 'نامشخص' // اضافه کردن position با مقدار پیش‌فرض
+// };
 // }
-
 // // نقشه‌برداری داده‌های Google Sheets به ساختار کاربر محلی
 // function mapGSToUser(gsData) {
-//   return {
-//     __backendId: gsData.__backendId,
-//     fullName: gsData.fullName,
-//     username: gsData.username,
-//     password: gsData.password,
-//     role: gsData.role,
-//     position: gsData.position // اضافه کردن position
-//   };
+// return {
+// __backendId: gsData.__backendId,
+// fullName: gsData.fullName,
+// username: gsData.username,
+// password: gsData.password,
+// role: gsData.role,
+// position: gsData.position // اضافه کردن position
+// };
 // }
-
 async function loadUsers() {
   try {
     const stored = localStorage.getItem(usersStorageKey);
@@ -424,7 +421,7 @@ function updateCurrentPage() {
       renderEmployees(allData.filter(d => d.type === 'employee'));
       break;
     case 'history':
-      const allCompleted = allData.filter(d => d.type === 'request' && d.status === 'completed');
+      const allCompleted = allData.filter(d => d.type === 'request' && (d.status === 'completed' || d.status === 'delet'));
       renderHistory(filterHistory(allCompleted));
        break;
     case 'accounts':
@@ -639,6 +636,33 @@ if (document.getElementById('current-user-position')) {
     }
   }
   updateCurrentPage();
+  if (getCurrentPage() === 'requests') {
+  renderRequests(allData.filter(d => d.type === 'request'));
+}
+if (getCurrentPage() === 'history') {
+  const historySearchInput = document.getElementById('history-search');
+  const historyFromDate = document.getElementById('history-from-date');
+  const historyToDate = document.getElementById('history-to-date');
+  const searchButton = document.querySelector('button[onclick="filterHistory()"]');
+  if (historySearchInput) {
+    historySearchInput.addEventListener('input', () => {
+      filterHistory(); // جستجوی اتوماتیک با تایپ
+    });
+  }
+  if (historyFromDate) {
+    historyFromDate.addEventListener('change', () => {
+      filterHistory(); // بروزرسانی اتوماتیک با تغییر تاریخ
+    });
+  }
+  if (historyToDate) {
+    historyToDate.addEventListener('change', () => {
+      filterHistory(); // بروزرسانی اتوماتیک با تغییر تاریخ
+    });
+  }
+  if (searchButton) {
+    searchButton.classList.add('hidden'); // hidden کردن دکمه جستجو
+  }
+}
 const searchInput = document.getElementById('motorcycle-status-search');
 const searchBtn = document.getElementById('motorcycle-status-search-btn');
 if (searchBtn && searchInput) {
@@ -717,39 +741,46 @@ function updateDashboard() {
 function renderRequests(requests) {
   const container = document.getElementById('requests-list');
   if (!container) return;
-  const requestedMotorcycles = requests.filter(r => r.status === 'pending' || r.status === 'active');
+  const requestedMotorcycles = requests.filter(r => (r.status === 'pending' || r.status === 'active') && r.status !== 'delet');
   if (requestedMotorcycles.length === 0) {
     container.innerHTML = '<div class="text-center py-12 text-gray-300"><p class="text-lg">هیچ موتور سکیلی درخواست نشده است</p><p class="text-sm mt-2">تمام موتور سکیل‌ها در دسترس هستند</p></div>';
     return;
   }
-  container.innerHTML = requestedMotorcycles.map(request => `
-    <div class="card p-6">
-      <div class="flex items-center justify-between">
-        <div class="flex items-center gap-4 flex-1">
-          <div class="motorcycle-icon engine-glow">
-            🏍️
+  container.innerHTML = requestedMotorcycles.map(request => {
+    let deleteButton = '';
+    if (currentUserRole === 'admin') {
+      deleteButton = `<button class="delete-btn" onclick="deleteRequest('${request.__backendId}')">🗑️ حذف</button>`;
+    }
+    return `
+      <div class="card p-6">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-4 flex-1">
+            <div class="motorcycle-icon engine-glow">
+              🏍️
+            </div>
+            <div class="flex-1">
+              <h3 class="text-lg font-bold text-white">${request.motorcycleName} - ${request.motorcycleColor} - دیپارتمنت ${request.motorcycleDepartment}</h3>
+              <p class="text-gray-100 mt-1">👤 ${request.employeeName} (${request.department})</p>
+              <p class="text-gray-100 mt-1">🆔 درخواست کننده: ${request.requesterFullName || 'ناشناس'}</p>
+              <p class="text-sm text-gray-100 mt-1">📅 ${request.requestDate}</p>
+              ${request.exitTime ? `<p class="text-sm text-gray-100">🕐 خروج: ${request.exitTime}</p>` : ''}
+              <p class="text-sm text-gray-100 mt-1">🔢 پلاک: ${request.motorcyclePlate}</p>
+            </div>
           </div>
-          <div class="flex-1">
-            <h3 class="text-lg font-bold text-white">${request.motorcycleName} - ${request.motorcycleColor} - دیپارتمنت ${request.motorcycleDepartment}</h3>
-            <p class="text-gray-100 mt-1">👤 ${request.employeeName} (${request.department})</p>
-            <p class="text-gray-100 mt-1">🆔 درخواست کننده: ${request.requesterFullName || 'ناشناس'}</p> <!-- تغییر: اضافه کردن نام درخواست‌کننده -->
-            <p class="text-sm text-gray-100 mt-1">📅 ${request.requestDate}</p>
-            ${request.exitTime ? `<p class="text-sm text-gray-100">🕐 خروج: ${request.exitTime}</p>` : ''}
-            <p class="text-sm text-gray-100 mt-1">🔢 پلاک: ${request.motorcyclePlate}</p>
+          <div class="flex items-center gap-3">
+            <span class="status-badge ${request.status === 'pending' ? 'status-pending' : 'status-active'}">
+              ${request.status === 'pending' ? '⏳ در انتظار تحویل' : '🔄 در حال استفاده'}
+            </span>
+            ${request.status === 'pending' ?
+              `<button class="btn btn-success" onclick="markAsExit('${request.__backendId}')">🚀 خروج</button>` :
+              `<button class="btn btn-primary" onclick="markAsEntry('${request.__backendId}')">🏁 ورود</button>`
+            }
+            ${deleteButton}
           </div>
-        </div>
-        <div class="flex items-center gap-3">
-          <span class="status-badge ${request.status === 'pending' ? 'status-pending' : 'status-active'}">
-            ${request.status === 'pending' ? '⏳ در انتظار تحویل' : '🔄 در حال استفاده'}
-          </span>
-          ${request.status === 'pending' ?
-            `<button class="btn btn-success" onclick="markAsExit('${request.__backendId}')">🚀 خروج</button>` :
-            `<button class="btn btn-primary" onclick="markAsEntry('${request.__backendId}')">🏁 ورود</button>`
-          }
         </div>
       </div>
-    </div>
-  `).join('');
+    `;
+  }).join('');
 }
 function renderMotorcycles(motorcycles) {
   const container = document.getElementById('motorcycles-list');
@@ -777,7 +808,6 @@ function renderMotorcycles(motorcycles) {
     </div>
   `).join('');
 }
-
 function showMotorcycleDetails(motorcycleId) {
   const motorcycle = allData.find(d => d.__backendId === motorcycleId);
   if (!motorcycle) {
@@ -869,7 +899,6 @@ function showMotorcycleDetails(motorcycleId) {
     closeModal('motorcycle-details-modal');
   };
 }
-
 function renderEmployees(employees) {
   const container = document.getElementById('employees-list');
   if (!container) return;
@@ -906,7 +935,7 @@ function renderHistory(filteredRequests) {
     return;
   }
   container.innerHTML = filteredRequests.map(request => `
-    <div class="card p-6">
+    <div class="card p-6 ${request.status === 'delet' ? 'bg-red-900' : ''}">
       <div class="flex items-center justify-between">
         <div class="flex items-center gap-4 flex-1">
           <div class="motorcycle-icon">
@@ -914,8 +943,9 @@ function renderHistory(filteredRequests) {
           </div>
           <div class="flex-1">
             <h3 class="text-lg font-bold text-white">${request.motorcycleName} - ${request.motorcycleColor} - دیپارتمنت ${request.motorcycleDepartment}</h3>
-            <p class="text-gray-200 mt-1">👤 ${request.employeeName} (${request.department})</p>
-            <p class="text-gray-200 mt-1">🆔 درخواست کننده: ${request.requesterFullName || 'ناشناس'}</p> <!-- تغییر: اضافه کردن نام درخواست‌کننده -->
+            <p class="text-gray-200 mt-1">👤 ${request.employeeName} ( ${request.department})</p>
+            <p class="text-gray-200 mt-1">🆔 درخواست کننده: ${request.requesterFullName || 'ناشناس'}</p>
+            ${request.deleterFullName ? `<p class="text-gray-200 mt-1">🗑️ حذف‌کننده: ${request.deleterFullName}</p>` : ''}
             <div class="flex gap-6 mt-2 text-sm text-gray-100">
               <span>📅 ${request.requestDate}</span>
               <span>🚀 خروج: ${request.exitTime}</span>
@@ -923,7 +953,9 @@ function renderHistory(filteredRequests) {
             </div>
           </div>
         </div>
-        <span class="status-badge status-completed">✅ تکمیل شده</span>
+        <span class="status-badge ${request.status === 'completed' ? 'status-completed' : (request.status === 'delet' ? 'status-deleted' : '')}">
+          ${request.status === 'completed' ? '✅ تکمیل شده' : (request.status === 'delet' ? '❌ حذف شده' : 'نامعلوم')}
+        </span>
       </div>
     </div>
   `).join('');
@@ -989,7 +1021,7 @@ function renderMotorcycleStatus(motorcycles, requests) {
     motorcycleStatusData :
     motorcycleStatusData.filter(data => data.status === currentStatusFilter);
 if (currentMotorcycleSearchTerm) {
-  filteredData = filteredData.filter(data => 
+  filteredData = filteredData.filter(data =>
     data.motorcycle.motorcycleName.toLowerCase().includes(currentMotorcycleSearchTerm.toLowerCase()) ||
     data.motorcycle.motorcycleDepartment.toLowerCase().includes(currentMotorcycleSearchTerm.toLowerCase())
   );
@@ -1042,7 +1074,7 @@ function filterMotorcycleStatus(filter) {
 }
 function filterHistory(completedRequests) {
   if (!completedRequests) {
-    completedRequests = allData.filter(d => d.type === 'request' && d.status === 'completed');
+    completedRequests = allData.filter(d => d.type === 'request' && (d.status === 'completed' || d.status === 'delet'));
   }
   const searchTerm = document.getElementById('history-search')?.value.toLowerCase() || historySearchTerm;
   const fromDateStr = document.getElementById('history-from-date')?.value || historyFromDate;
@@ -1057,11 +1089,7 @@ function filterHistory(completedRequests) {
   }
   if (fromDateStr || toDateStr) {
     filtered = filtered.filter(r => {
-      const parts = r.requestDate.split('/');
-      if (parts.length !== 3) return true;
-      const [j_y, j_m, j_d] = parts.map(p => parseInt(p.replace(/[۰-۹]/g, d => String.fromCharCode(d.charCodeAt(0) - 1728))));
-      const gregDate = JalaliDate.jalaliToGregorian(j_y, j_m, j_d);
-      const reqDate = `${gregDate[0]}-${gregDate[1]}-${gregDate[2]}`;
+      const reqDate = r.requestDate.replace(/\//g, '-'); // تبدیل به YYYY-MM-DD
       if (fromDateStr && reqDate < fromDateStr) return false;
       if (toDateStr && reqDate > toDateStr) return false;
       return true;
@@ -1159,8 +1187,6 @@ function updateModalSelects(employees, motorcycles) {
   availableDepartments = ['متفرقه', ...uniqueDepts];
   populateDepartmentDropdown();
 }
-
-
 function populateEmployeeDropdown() {
   const searchTerm = document.getElementById('employee-search').value.toLowerCase();
   const filteredEmployees = availableEmployees.filter(emp =>
@@ -1177,7 +1203,6 @@ function populateEmployeeDropdown() {
     `<div class="p-3 hover:bg-gray-100 cursor-pointer border-b border-gray-100 last:border-b-0" onclick="selectEmployee('${emp.__backendId}', '${emp.employeeName} - ${emp.employeeId}')">${emp.employeeName} - ${emp.employeeId}</div>`
   ).join('');
 }
-
 function searchEmployees() {
   populateEmployeeDropdown();
 }
@@ -1202,7 +1227,6 @@ function selectEmployee(employeeId, employeeText) {
   document.getElementById('selected-employee').value = employeeId;
   document.getElementById('employee-dropdown').classList.add('hidden');
 }
-
 function populateMotorcycleDropdown() {
   const optionsContainer = document.getElementById('motorcycle-options');
   if (!optionsContainer) return;
@@ -1219,7 +1243,6 @@ function populateMotorcycleDropdown() {
     `<div class="p-3 hover:bg-gray-100 cursor-pointer border-b border-gray-100 last:border-b-0" onclick="selectMotorcycle('${moto.__backendId}', '${moto.motorcycleName} - ${moto.motorcycleColor} - ${moto.motorcycleDepartment}')">${moto.motorcycleName} - ${moto.motorcycleColor} - ${moto.motorcycleDepartment}</div>`
   ).join('');
 }
-
 function searchMotorcycles() {
   const searchTerm = document.getElementById('motorcycle-search').value.toLowerCase();
   const activeRequests = allData.filter(d => d.type === 'request' && (d.status === 'pending' || d.status === 'active'));
@@ -1242,7 +1265,6 @@ function searchMotorcycles() {
     `<div class="p-3 hover:bg-gray-100 cursor-pointer border-b border-gray-100 last:border-b-0" onclick="selectMotorcycle('${moto.__backendId}', '${moto.motorcycleName} - ${moto.motorcycleColor} - ${moto.motorcycleDepartment}')">${moto.motorcycleName} - ${moto.motorcycleColor} - ${moto.motorcycleDepartment}</div>`
   ).join('');
 }
-
 function toggleMotorcycleDropdown() {
   if (document.getElementById('motorcycle-select').disabled) return;
   const dropdown = document.getElementById('motorcycle-dropdown');
@@ -1643,6 +1665,40 @@ async function deleteEmployee(employeeId) {
     updateCurrentPage();
   } else {
     showToast('خطا در حذف کارمند', '❌');
+  }
+}
+async function deleteRequest(requestId) {
+  if (currentUserRole !== 'admin') {
+    showToast('شما دسترسی به حذف درخواست ندارید', '⚠️');
+    return { isOk: false };
+  }
+  const request = allData.find(d => d.__backendId === requestId);
+  if (!request) {
+    showToast('درخواست یافت نشد', '❌');
+    return { isOk: false };
+  }
+  const now = new Date();
+  const currentTime = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+  // تنظیم زمان ورود/خروج بر اساس وضعیت فعلی
+  let updatedExitTime = request.exitTime || currentTime; // اگر pending، خروج را حالا تنظیم کنیم
+  let updatedEntryTime = currentTime; // ورود را همیشه با زمان حذف تنظیم کنیم
+  const updatedRequest = {
+    ...request,
+    status: 'delet', // تغییر وضعیت به 'delet'
+    deleterFullName: window.currentUser.fullName || 'ناشناس', // نام حذف‌کننده
+    exitTime: updatedExitTime,
+    entryTime: updatedEntryTime
+  };
+  const result = await window.dataSdk.update(updatedRequest); // به جای delete، update
+  if (result.isOk) {
+    showToast('درخواست با موفقیت حذف (به وضعیت delet تغییر یافت)', '✅');
+    if (getCurrentPage() === 'requests') {
+      renderRequests(allData.filter(d => d.type === 'request' && (d.status === 'pending' || d.status === 'active')));
+    }
+    return { isOk: true };
+  } else {
+    showToast('خطا در تغییر وضعیت درخواست', '❌');
+    return { isOk: false };
   }
 }
 function showToast(message, icon = '✅') {
