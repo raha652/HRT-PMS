@@ -112,6 +112,7 @@ async function syncMotorcyclesWithGoogleSheets(allDataRef) {
     return false;
   }
 }
+
 function mapRequestToGS(item) {
   return {
     'Unique ID': item.__backendId,
@@ -127,9 +128,11 @@ function mapRequestToGS(item) {
     'نام درخواست کننده': item.requesterFullName,
     'زمان خروج': item.exitTime || '',
     'زمان ورود': item.entryTime || '',
-    'وضعیت': item.status
+    'وضعیت': item.status,
+    'نام حذف کننده': item.deleterFullName || ''  // فیلد جدید برای نام حذف‌کننده
   };
 }
+
 function mapGSToRequest(record) {
   function formatDateToString(value) {
     if (typeof value === 'string') {
@@ -167,23 +170,24 @@ function mapGSToRequest(record) {
     }
     return value || '';
   }
-  return {
-    type: 'request',
-    __backendId: record['Unique ID'],
-    employeeName: record['نام کارمند'],
-    employeeId: record['آیدی کارمند'],
-    department: record['دیپارتمنت کارمند'],
-    fingerprintId: record['شناسه اثر انگشت'],
-    motorcycleName: record['نام موتور سکیل'],
-    motorcycleColor: record['رنگ موتور سکیل'],
-    motorcyclePlate: record['پلاک موتور سکیل'],
-    motorcycleDepartment: record['دیپارتمنت موتور سکیل'],
-    requestDate: formatDateToString(record['تاریخ درخواست']),
-    requesterFullName: record['نام درخواست کننده'],
-    exitTime: formatTimeToString(record['زمان خروج']) || '',
-    entryTime: formatTimeToString(record['زمان ورود']) || '',
-    status: record['وضعیت']
-  };
+return {
+  type: 'request',
+  __backendId: record['Unique ID'],
+  employeeName: record['نام کارمند'],
+  employeeId: record['آیدی کارمند'],
+  department: record['دیپارتمنت کارمند'],
+  fingerprintId: record['شناسه اثر انگشت'],
+  motorcycleName: record['نام موتور سکیل'],
+  motorcycleColor: record['رنگ موتور سکیل'],
+  motorcyclePlate: record['پلاک موتور سکیل'],
+  motorcycleDepartment: record['دیپارتمنت موتور سکیل'],
+  requestDate: formatDateToString(record['تاریخ درخواست']),
+  requesterFullName: record['نام درخواست کننده'],
+  exitTime: formatTimeToString(record['زمان خروج']) || '',
+  entryTime: formatTimeToString(record['زمان ورود']) || '',
+  status: record['وضعیت'],
+  deleterFullName: record['نام حذف کننده'] || ''  // فیلد جدید برای نام حذف‌کننده
+};
 }
 async function syncRequestsWithGoogleSheets(allDataRef) {
   try {
@@ -192,6 +196,8 @@ async function syncRequestsWithGoogleSheets(allDataRef) {
       let gsRequests = result.data
         .map(mapGSToRequest)
         .filter(req => req.__backendId);
+      // مطمئن شویم درخواست‌های با وضعیت 'delet' نیز sync شوند اما در UI نشان داده نشوند
+      gsRequests = gsRequests.filter(req => req.status !== 'delet' || true); 
       const nonRequestData = allDataRef.filter(d => d.type !== 'request');
       const motorcycles = nonRequestData.filter(d => d.type === 'motorcycle');
       for (let req of gsRequests) {
