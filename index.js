@@ -19,6 +19,9 @@ let historySearchTerm = '';
 let historyFromDate = '';
 let historyToDate = '';
 let currentMotorcycleId = '';
+let currentRequestFilter = 'all';
+let currentRequestSearch = '';
+let currentDeptFilter = 'all';
 const JalaliDate = {
   g_days_in_month: [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31],
   j_days_in_month: [31, 31, 31, 31, 31, 31, 30, 30, 30, 30, 30, 29]
@@ -412,6 +415,7 @@ function updateCurrentPage() {
   const page = getCurrentPage();
   switch (page) {
     case 'requests':
+      renderDeptFilters();
       renderRequests(allData.filter(d => d.type === 'request'));
       break;
     case 'motorcycles':
@@ -741,12 +745,36 @@ function updateDashboard() {
 function renderRequests(requests) {
   const container = document.getElementById('requests-list');
   if (!container) return;
-  const requestedMotorcycles = requests.filter(r => (r.status === 'pending' || r.status === 'active') && r.status !== 'delet');
-  if (requestedMotorcycles.length === 0) {
+
+  // Filter active and pending requests (exclude completed and delet)
+  let filteredRequests = requests.filter(r => r.status === 'pending' || r.status === 'active');
+
+  // Apply status filter
+  if (currentRequestFilter !== 'all') {
+    filteredRequests = filteredRequests.filter(r => r.status === currentRequestFilter);
+  }
+
+  // Apply department filter
+  if (currentDeptFilter !== 'all') {
+    filteredRequests = filteredRequests.filter(r => r.motorcycleDepartment === currentDeptFilter);
+  }
+
+  // Apply search
+  if (currentRequestSearch) {
+    const searchLower = currentRequestSearch.toLowerCase();
+    filteredRequests = filteredRequests.filter(r =>
+      r.motorcycleName.toLowerCase().includes(searchLower) ||
+      r.employeeName.toLowerCase().includes(searchLower) ||
+      r.motorcycleDepartment.toLowerCase().includes(searchLower) ||
+      (r.requesterFullName && r.requesterFullName.toLowerCase().includes(searchLower))
+    );
+  }
+
+  if (filteredRequests.length === 0) {
     container.innerHTML = '<div class="text-center py-12 text-gray-300"><p class="text-lg">هیچ موتور سکیلی درخواست نشده است</p><p class="text-sm mt-2">تمام موتور سکیل‌ها در دسترس هستند</p></div>';
     return;
   }
-  container.innerHTML = requestedMotorcycles.map(request => {
+  container.innerHTML = filteredRequests.map(request => {
     let deleteButton = '';
     if (currentUserRole === 'admin') {
       deleteButton = `<button class="delete-btn" onclick="deleteRequest('${request.__backendId}')">🗑️ حذف</button>`;
@@ -1746,4 +1774,31 @@ function toggleUserDropdown() {
 document.addEventListener('DOMContentLoaded', initApp);
 if (window.location.hostname !== '127.0.0.1' && window.location.hostname !== 'localhost') {
   (function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'99bbf8eb8072d381',t:'MTc2MjY3NzI4MC4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();
+}
+function filterRequests(filter) {
+  currentRequestFilter = filter;
+  document.querySelectorAll('[id^="filter-request-"]').forEach(btn => btn.classList.remove('active-filter'));
+  const selectedBtn = document.getElementById(`filter-request-${filter}`);
+  if (selectedBtn) {
+    selectedBtn.classList.add('active-filter');
+  }
+  renderRequests(allData.filter(d => d.type === 'request'));
+}
+function filterByDept(dept) {
+  currentDeptFilter = dept;
+  renderRequests(allData.filter(d => d.type === 'request'));
+  renderDeptFilters();  // اضافه برای آپدیت کلاس active و سفید شدن دور سوئیچ انتخاب‌شده
+}
+function searchRequests() {
+  currentRequestSearch = document.getElementById('request-search').value.trim();
+  renderRequests(allData.filter(d => d.type === 'request'));
+}
+function renderDeptFilters() {
+  const container = document.getElementById('dept-filters');
+  if (!container) return;
+  let html = `<button id="dept-all" class="btn btn-dept text-sm whitespace-nowrap ${currentDeptFilter === 'all' ? 'active-filter' : ''}" onclick="filterByDept('all')">همه</button>`;
+  departments.forEach(dept => {
+    html += `<button class="btn btn-dept text-sm whitespace-nowrap ${currentDeptFilter === dept ? 'active-filter' : ''}" onclick="filterByDept('${dept}')">${dept}</button>`;
+  });
+  container.innerHTML = html;
 }
