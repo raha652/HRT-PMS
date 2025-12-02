@@ -22,6 +22,7 @@ let currentMotorcycleId = '';
 let currentRequestFilter = 'all';
 let currentRequestSearch = '';
 let currentDeptFilter = 'all';
+let requestedEmployeeIds = []; 
 const JalaliDate = {
   g_days_in_month: [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31],
   j_days_in_month: [31, 31, 31, 31, 31, 31, 30, 30, 30, 30, 30, 29]
@@ -1188,11 +1189,13 @@ function filterByDepartment() {
     motorcycleDisplay.textContent = 'ابتدا دیپارتمنت را انتخاب کنید';
     return;
   }
+  const activeRequests = allData.filter(d => d.type === 'request' && (d.status === 'pending' || d.status === 'active'));
+  requestedEmployeeIds = activeRequests.map(r => r.employeeId);
   if (selectedDepartment === 'متفرقه') {
-    availableEmployees = allData.filter(d => d.type === 'employee');
+    availableEmployees = allData.filter(d => d.type === 'employee' && !requestedEmployeeIds.includes(d.employeeId)); 
     availableMotorcycles = allData.filter(d => d.type === 'motorcycle');
   } else {
-    availableEmployees = allData.filter(d => d.type === 'employee' && d.department === selectedDepartment);
+    availableEmployees = allData.filter(d => d.type === 'employee' && d.department === selectedDepartment && !requestedEmployeeIds.includes(d.employeeId)); 
     availableMotorcycles = allData.filter(d => d.type === 'motorcycle' && d.motorcycleDepartment === selectedDepartment);
   }
   employeeDisplay.textContent = availableEmployees.length > 0 ? 'کارمند را انتخاب کنید' : 'هیچ کارمندی در این دیپارتمنت یافت نشد';
@@ -1216,7 +1219,10 @@ function updateModalSelects(employees, motorcycles) {
 }
 function populateEmployeeDropdown() {
   const searchTerm = document.getElementById('employee-search').value.toLowerCase();
-  const filteredEmployees = availableEmployees.filter(emp =>
+  const activeRequests = allData.filter(d => d.type === 'request' && (d.status === 'pending' || d.status === 'active'));
+  requestedEmployeeIds = activeRequests.map(r => r.employeeId); 
+  const availableEmployeesForRequest = availableEmployees.filter(emp => !requestedEmployeeIds.includes(emp.employeeId)); 
+  const filteredEmployees = availableEmployeesForRequest.filter(emp =>
     emp.employeeName.toLowerCase().includes(searchTerm) ||
     String(emp.employeeId).toLowerCase().includes(searchTerm)
   );
@@ -1231,7 +1237,7 @@ function populateEmployeeDropdown() {
   ).join('');
 }
 function searchEmployees() {
-  populateEmployeeDropdown();
+  populateEmployeeDropdown(); 
 }
 function toggleEmployeeDropdown() {
   if (document.getElementById('employee-select').disabled) return;
@@ -1786,7 +1792,7 @@ function filterRequests(filter) {
 function filterByDept(dept) {
   currentDeptFilter = dept;
   renderRequests(allData.filter(d => d.type === 'request'));
-  renderDeptFilters();  // اضافه برای آپدیت کلاس active و سفید شدن دور سوئیچ انتخاب‌شده
+  renderDeptFilters();  
 }
 function searchRequests() {
   currentRequestSearch = document.getElementById('request-search').value.trim();
