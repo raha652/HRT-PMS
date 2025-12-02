@@ -31,6 +31,16 @@
      <div class="flex items-center justify-between mb-6"><button class="btn btn-secondary" onclick="navigateTo('./index.html')"> ← بازگشت به صفحه اصلی </button>
       <h2 class="text-2xl font-bold text-white">موتور سکیل‌های درخواست داده شده</h2>
      </div>
+<div class="flex justify-between mb-4">
+  <div class="flex gap-2">
+   <button id="filter-request-all" class="btn btn-all text-sm whitespace-nowrap active-filter" onclick="filterRequests('all')">همه</button>
+   <button id="filter-request-active" class="btn btn-active text-sm whitespace-nowrap" onclick="filterRequests('active')">در حال استفاده</button>
+   <button id="filter-request-pending" class="btn btn-pending text-sm whitespace-nowrap" onclick="filterRequests('pending')">در انتظار</button>
+  </div>
+  <input type="text" id="request-search" class="input-field w-24 text-sm mr-4 text-gray-700 mt-0" placeholder="جستجو بر اساس نام، دیپارتمنت، موتور سکیل و ..." oninput="searchRequests()">
+ </div>
+ <div id="dept-filters" class="flex gap-2 mb-4 overflow-x-auto w-full px-0 justify-start items-center min-h-10 py-1"></div>
+     <!-- <div id="dept-filters" class="flex gap-2 mb-4 overflow-x-auto"></div> -->
      <div id="requests-list" class="space-y-4"></div>
     </div>
    </div>
@@ -135,5 +145,4 @@
   <script src="./googleSheets.js"></script>
   <script src="./index.js"></script>
  </body>
-
 </html>
