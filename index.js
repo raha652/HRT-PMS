@@ -26,7 +26,7 @@ const JalaliDate = {
   g_days_in_month: [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31],
   j_days_in_month: [31, 31, 31, 31, 31, 31, 30, 30, 30, 30, 30, 29]
 };
-JalaliDate.jalaliToGregorian = function(j_y, j_m, j_d) {
+JalaliDate.jalaliToGregorian = function (j_y, j_m, j_d) {
   j_y = parseInt(j_y);
   j_m = parseInt(j_m);
   j_d = parseInt(j_d);
@@ -40,8 +40,7 @@ JalaliDate.jalaliToGregorian = function(j_y, j_m, j_d) {
   var gy = 1600 + 400 * parseInt(g_day_no / 146097);
   g_day_no = g_day_no % 146097;
   var leap = true;
-  if (g_day_no >= 36525)
-  {
+  if (g_day_no >= 36525) {
     g_day_no--;
     gy += 100 * parseInt(g_day_no / 36524);
     g_day_no = g_day_no % 36524;
@@ -113,14 +112,14 @@ async function loadUsers() {
     const stored = localStorage.getItem(usersStorageKey);
     allUsers = stored && stored !== 'undefined' ? JSON.parse(stored) : [];
     if (allUsers.length === 0) {
-const defaultAdmin = {
-  __backendId: generateId(),
-  fullName: 'شهاب حمیدی',
-  username: 'admin',
-  password: 'admin123',
-  role: 'admin',
-  position: 'Electrical ENG' // موقعیت شغلی پیش‌فرض برای ادمین
-};
+      const defaultAdmin = {
+        __backendId: generateId(),
+        fullName: 'شهاب حمیدی',
+        username: 'admin',
+        password: 'admin123',
+        role: 'admin',
+        position: 'Electrical ENG' // موقعیت شغلی پیش‌فرض برای ادمین
+      };
       allUsers.push(defaultAdmin);
       await saveUsers();
     }
@@ -221,14 +220,14 @@ async function syncUsersWithGoogleSheets() {
         .filter(user => user.__backendId);
       const defaultAdminExists = gsUsers.some(u => u.username === 'admin');
       if (!defaultAdminExists) {
-const defaultAdmin = {
-  __backendId: generateId(),
-  fullName: 'شهاب حمیدی',
-  username: 'admin',
-  password: 'admin123',
-  role: 'admin',
-  position: 'Electrical ENG' // موقعیت شغلی پیش‌فرض برای ادمین
-};
+        const defaultAdmin = {
+          __backendId: generateId(),
+          fullName: 'شهاب حمیدی',
+          username: 'admin',
+          password: 'admin123',
+          role: 'admin',
+          position: 'Electrical ENG' // موقعیت شغلی پیش‌فرض برای ادمین
+        };
         gsUsers.push(defaultAdmin);
       }
       allUsers = gsUsers;
@@ -427,7 +426,7 @@ function updateCurrentPage() {
     case 'history':
       const allCompleted = allData.filter(d => d.type === 'request' && (d.status === 'completed' || d.status === 'delet'));
       renderHistory(filterHistory(allCompleted));
-       break;
+      break;
     case 'accounts':
       renderAccounts();
       break;
@@ -574,12 +573,12 @@ async function initApp() {
   currentUserRole = currentUser.role;
   session.fullName = currentUser.fullName;
   localStorage.setItem('session', JSON.stringify(session));
-if (document.getElementById('current-user')) {
-  document.getElementById('current-user').textContent = currentUser.fullName || "کاربر ناشناس";
-}
-if (document.getElementById('current-user-position')) {
-  document.getElementById('current-user-position').textContent = currentUser.position || "نامشخص"; // ست موقعیت شغلی
-}
+  if (document.getElementById('current-user')) {
+    document.getElementById('current-user').textContent = currentUser.fullName || "کاربر ناشناس";
+  }
+  if (document.getElementById('current-user-position')) {
+    document.getElementById('current-user-position').textContent = currentUser.position || "نامشخص"; // ست موقعیت شغلی
+  }
   const userIcon = document.getElementById('user-profile-icon');
   if (userIcon) {
     if (currentUser.photo) {
@@ -641,44 +640,44 @@ if (document.getElementById('current-user-position')) {
   }
   updateCurrentPage();
   if (getCurrentPage() === 'requests') {
-  renderRequests(allData.filter(d => d.type === 'request'));
-}
-if (getCurrentPage() === 'history') {
-  const historySearchInput = document.getElementById('history-search');
-  const historyFromDate = document.getElementById('history-from-date');
-  const historyToDate = document.getElementById('history-to-date');
-  const searchButton = document.querySelector('button[onclick="filterHistory()"]');
-  if (historySearchInput) {
-    historySearchInput.addEventListener('input', () => {
-      filterHistory(); // جستجوی اتوماتیک با تایپ
+    renderRequests(allData.filter(d => d.type === 'request'));
+  }
+  if (getCurrentPage() === 'history') {
+    const historySearchInput = document.getElementById('history-search');
+    const historyFromDate = document.getElementById('history-from-date');
+    const historyToDate = document.getElementById('history-to-date');
+    const searchButton = document.querySelector('button[onclick="filterHistory()"]');
+    if (historySearchInput) {
+      historySearchInput.addEventListener('input', () => {
+        filterHistory(); // جستجوی اتوماتیک با تایپ
+      });
+    }
+    if (historyFromDate) {
+      historyFromDate.addEventListener('change', () => {
+        filterHistory(); // بروزرسانی اتوماتیک با تغییر تاریخ
+      });
+    }
+    if (historyToDate) {
+      historyToDate.addEventListener('change', () => {
+        filterHistory(); // بروزرسانی اتوماتیک با تغییر تاریخ
+      });
+    }
+    if (searchButton) {
+      searchButton.classList.add('hidden'); // hidden کردن دکمه جستجو
+    }
+  }
+  const searchInput = document.getElementById('motorcycle-status-search');
+  const searchBtn = document.getElementById('motorcycle-status-search-btn');
+  if (searchBtn && searchInput) {
+    searchInput.addEventListener('input', (e) => {
+      currentMotorcycleSearchTerm = e.target.value.trim();
+      updateCurrentPage();
+    });
+    searchBtn.addEventListener('click', () => {
+      currentMotorcycleSearchTerm = searchInput.value.trim();
+      updateCurrentPage();
     });
   }
-  if (historyFromDate) {
-    historyFromDate.addEventListener('change', () => {
-      filterHistory(); // بروزرسانی اتوماتیک با تغییر تاریخ
-    });
-  }
-  if (historyToDate) {
-    historyToDate.addEventListener('change', () => {
-      filterHistory(); // بروزرسانی اتوماتیک با تغییر تاریخ
-    });
-  }
-  if (searchButton) {
-    searchButton.classList.add('hidden'); // hidden کردن دکمه جستجو
-  }
-}
-const searchInput = document.getElementById('motorcycle-status-search');
-const searchBtn = document.getElementById('motorcycle-status-search-btn');
-if (searchBtn && searchInput) {
-  searchInput.addEventListener('input', (e) => {
-    currentMotorcycleSearchTerm = e.target.value.trim();
-    updateCurrentPage();
-  });
-  searchBtn.addEventListener('click', () => {
-    currentMotorcycleSearchTerm = searchInput.value.trim();
-    updateCurrentPage();
-  });
-}
   setupIdleLogout();
 }
 function setupIdleLogout() {
@@ -800,9 +799,9 @@ function renderRequests(requests) {
               ${request.status === 'pending' ? '⏳ در انتظار تحویل' : '🔄 در حال استفاده'}
             </span>
             ${request.status === 'pending' ?
-              `<button class="btn btn-success" onclick="markAsExit('${request.__backendId}')">🚀 خروج</button>` :
-              `<button class="btn btn-primary" onclick="markAsEntry('${request.__backendId}')">🏁 ورود</button>`
-            }
+        `<button class="btn btn-success" onclick="markAsExit('${request.__backendId}')">🚀 خروج</button>` :
+        `<button class="btn btn-primary" onclick="markAsEntry('${request.__backendId}')">🏁 ورود</button>`
+      }
             ${deleteButton}
           </div>
         </div>
@@ -1048,14 +1047,14 @@ function renderMotorcycleStatus(motorcycles, requests) {
   let filteredData = currentStatusFilter === 'all' ?
     motorcycleStatusData :
     motorcycleStatusData.filter(data => data.status === currentStatusFilter);
-if (currentMotorcycleSearchTerm) {
-  filteredData = filteredData.filter(data =>
-    data.motorcycle.motorcycleName.toLowerCase().includes(currentMotorcycleSearchTerm.toLowerCase()) ||
-    data.motorcycle.motorcycleDepartment.toLowerCase().includes(currentMotorcycleSearchTerm.toLowerCase())
-  );
-}
+  if (currentMotorcycleSearchTerm) {
+    filteredData = filteredData.filter(data =>
+      data.motorcycle.motorcycleName.toLowerCase().includes(currentMotorcycleSearchTerm.toLowerCase()) ||
+      data.motorcycle.motorcycleDepartment.toLowerCase().includes(currentMotorcycleSearchTerm.toLowerCase())
+    );
+  }
   // Update filtered count
-    document.getElementById('filtered-count').textContent = filteredData.length;
+  document.getElementById('filtered-count').textContent = filteredData.length;
   if (filteredData.length === 0) {
     const filterNames = {
       'available': 'موجود در پارکینگ',
@@ -1739,7 +1738,7 @@ function showToast(message, icon = '✅') {
     toast.classList.remove('active');
   }, 3000);
 }
-document.addEventListener('click', function(event) {
+document.addEventListener('click', function (event) {
   const departmentDropdown = document.getElementById('department-dropdown');
   const employeeDropdown = document.getElementById('employee-dropdown');
   const motorcycleDropdown = document.getElementById('motorcycle-dropdown');
@@ -1773,7 +1772,7 @@ function toggleUserDropdown() {
 }
 document.addEventListener('DOMContentLoaded', initApp);
 if (window.location.hostname !== '127.0.0.1' && window.location.hostname !== 'localhost') {
-  (function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'99bbf8eb8072d381',t:'MTc2MjY3NzI4MC4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();
+  (function () { function c() { var b = a.contentDocument || a.contentWindow.document; if (b) { var d = b.createElement('script'); d.innerHTML = "window.__CF$cv$params={r:'99bbf8eb8072d381',t:'MTc2MjY3NzI4MC4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);"; b.getElementsByTagName('head')[0].appendChild(d) } } if (document.body) { var a = document.createElement('iframe'); a.height = 1; a.width = 1; a.style.position = 'absolute'; a.style.top = 0; a.style.left = 0; a.style.border = 'none'; a.style.visibility = 'hidden'; document.body.appendChild(a); if ('loading' !== document.readyState) c(); else if (window.addEventListener) document.addEventListener('DOMContentLoaded', c); else { var e = document.onreadystatechange || function () { }; document.onreadystatechange = function (b) { e(b); 'loading' !== document.readyState && (document.onreadystatechange = e, c()) } } } })();
 }
 function filterRequests(filter) {
   currentRequestFilter = filter;
