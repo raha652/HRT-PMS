@@ -434,10 +434,14 @@ transform: scale-105;
 
 .input-field {
   width: 100%;
-  padding: 10px 14px;  /* کوچکتر کردن padding فیلد جستجو */
+  padding: 10px 14px; 
   border: 2px solid #e5e7eb;
-  border-radius: 10px;  /* کمی کوچکتر */
-  font-size: 13px;      /* فونت کوچکتر */
+  border-radius: 10px; 
+  font-size: 13px;      
   transition: all 0.3s ease;
   background: white;
+}
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
 }
