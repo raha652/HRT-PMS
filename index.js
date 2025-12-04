@@ -22,7 +22,7 @@ let currentMotorcycleId = '';
 let currentRequestFilter = 'all';
 let currentRequestSearch = '';
 let currentDeptFilter = 'all';
-let requestedEmployeeIds = []; 
+let requestedEmployeeIds = [];
 const JalaliDate = {
   g_days_in_month: [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31],
   j_days_in_month: [31, 31, 31, 31, 31, 31, 30, 30, 30, 30, 30, 29]
@@ -86,28 +86,6 @@ async function saveData(data) {
     showToast('خطا در ذخیره داده‌ها', '❌');
   }
 }
-// // نقشه‌برداری کاربر به ساختار Google Sheets
-// function mapUserToGS(user) {
-// return {
-// __backendId: user.__backendId,
-// fullName: user.fullName,
-// username: user.username,
-// password: user.password, // هشدار: ذخیره رمز عبور ساده امن نیست، اما بر اساس کد موجود
-// role: user.role,
-// position: user.position || 'نامشخص' // اضافه کردن position با مقدار پیش‌فرض
-// };
-// }
-// // نقشه‌برداری داده‌های Google Sheets به ساختار کاربر محلی
-// function mapGSToUser(gsData) {
-// return {
-// __backendId: gsData.__backendId,
-// fullName: gsData.fullName,
-// username: gsData.username,
-// password: gsData.password,
-// role: gsData.role,
-// position: gsData.position // اضافه کردن position
-// };
-// }
 async function loadUsers() {
   try {
     const stored = localStorage.getItem(usersStorageKey);
@@ -244,18 +222,6 @@ async function syncUsersWithGoogleSheets() {
 window.dataSdk = {
   init: async (handler) => {
     allData = await loadData();
-    const employeeSyncSuccess = await syncEmployeesWithGoogleSheets(allData);
-    if (!employeeSyncSuccess) {
-      showToast('هشدار: همگام‌سازی کارمندان با Google Sheets ناموفق بود', '⚠️');
-    }
-    const motorcycleSyncSuccess = await syncMotorcyclesWithGoogleSheets(allData);
-    if (!motorcycleSyncSuccess) {
-      showToast('هشدار: همگام‌سازی موتور سکیل‌ها با Google Sheets ناموفق بود', '⚠️');
-    }
-    const requestSyncSuccess = await syncRequestsWithGoogleSheets(allData);
-    if (!requestSyncSuccess) {
-      showToast('هشدار: همگام‌سازی درخواست‌ها با Google Sheets ناموفق بود', '⚠️');
-    }
     currentRecordCount = allData.length;
     updateDepartments();
     if (handler && handler.onDataChanged) {
@@ -411,6 +377,50 @@ function getCurrentPage() {
   if (path.includes('profile-settings')) return 'profile-settings';
   return 'dashboard';
 }
+function showLoading() {
+  const loadingElement = document.getElementById('loading-overlay');
+  if (loadingElement) {
+    loadingElement.style.display = 'flex';
+  }
+}
+function hideLoading() {
+  const loadingElement = document.getElementById('loading-overlay');
+  if (loadingElement) {
+    loadingElement.style.display = 'none';
+  }
+}
+async function loadAndSyncDataForPage(page) {
+  try {
+    switch (page) {
+      case 'dashboard':
+      case 'management':
+        await syncEmployeesWithGoogleSheets(allData);
+        await syncMotorcyclesWithGoogleSheets(allData);
+        await syncRequestsWithGoogleSheets(allData);
+        break;
+      case 'requests':
+      case 'history':
+      case 'motorcycle-status':
+        await syncMotorcyclesWithGoogleSheets(allData); // برای depts
+        await syncRequestsWithGoogleSheets(allData);
+        break;
+      case 'motorcycles':
+        await syncMotorcyclesWithGoogleSheets(allData);
+        break;
+      case 'employees':
+        await syncEmployeesWithGoogleSheets(allData);
+        break;
+      case 'accounts':
+      case 'profile-settings':
+        await syncUsersWithGoogleSheets();
+        break;
+      default:
+        break;
+    }
+  } catch (error) {
+    console.error('Error in loadAndSyncDataForPage:', error);
+  }
+}
 function updateCurrentPage() {
   const page = getCurrentPage();
   switch (page) {
@@ -545,9 +555,11 @@ async function submitRoleUpdate(event) {
   }
 }
 async function initApp() {
+  showLoading(); // نمایش لودینگ در ابتدای initApp
   const sessionStr = localStorage.getItem('session');
   if (!sessionStr) {
     window.location.href = './login.html';
+    hideLoading();
     return;
   }
   let session;
@@ -556,11 +568,13 @@ async function initApp() {
   } catch (e) {
     localStorage.removeItem('session');
     window.location.href = './login.html';
+    hideLoading();
     return;
   }
   if (!session.loggedIn) {
     localStorage.removeItem('session');
     window.location.href = './login.html';
+    hideLoading();
     return;
   }
   await loadUsers();
@@ -568,6 +582,7 @@ async function initApp() {
   if (!currentUser) {
     localStorage.removeItem('session');
     window.location.href = './login.html';
+    hideLoading();
     return;
   }
   window.currentUser = currentUser;
@@ -600,10 +615,13 @@ async function initApp() {
   }
   updateDateTime();
   setInterval(updateDateTime, 60000);
+  hideLoading(); // پنهان کردن لودینگ بعد از تنظیم هدر
   const initResult = await window.dataSdk.init(dataHandler);
   if (!initResult.isOk) {
     showToast('خطا در بارگذاری داده‌ها', '❌');
   }
+  const page = getCurrentPage();
+  await loadAndSyncDataForPage(page); // lazy sync بر اساس صفحه
   if (window.elementSdk && typeof window.elementSdk.init === 'function') {
     await window.elementSdk.init({
       defaultConfig,
@@ -640,10 +658,10 @@ async function initApp() {
     }
   }
   updateCurrentPage();
-  if (getCurrentPage() === 'requests') {
+  if (window.location.pathname.includes('requests')) {
     renderRequests(allData.filter(d => d.type === 'request'));
   }
-  if (getCurrentPage() === 'history') {
+  if (window.location.pathname.includes('history')) {
     const historySearchInput = document.getElementById('history-search');
     const historyFromDate = document.getElementById('history-from-date');
     const historyToDate = document.getElementById('history-to-date');
@@ -745,20 +763,16 @@ function updateDashboard() {
 function renderRequests(requests) {
   const container = document.getElementById('requests-list');
   if (!container) return;
-
   // Filter active and pending requests (exclude completed and delet)
   let filteredRequests = requests.filter(r => r.status === 'pending' || r.status === 'active');
-
   // Apply status filter
   if (currentRequestFilter !== 'all') {
     filteredRequests = filteredRequests.filter(r => r.status === currentRequestFilter);
   }
-
   // Apply department filter
   if (currentDeptFilter !== 'all') {
     filteredRequests = filteredRequests.filter(r => r.motorcycleDepartment === currentDeptFilter);
   }
-
   // Apply search
   if (currentRequestSearch) {
     const searchLower = currentRequestSearch.toLowerCase();
@@ -769,7 +783,6 @@ function renderRequests(requests) {
       (r.requesterFullName && r.requesterFullName.toLowerCase().includes(searchLower))
     );
   }
-
   if (filteredRequests.length === 0) {
     container.innerHTML = '<div class="text-center py-12 text-gray-300"><p class="text-lg">هیچ موتور سکیلی درخواست نشده است</p><p class="text-sm mt-2">تمام موتور سکیل‌ها در دسترس هستند</p></div>';
     return;
@@ -1192,10 +1205,10 @@ function filterByDepartment() {
   const activeRequests = allData.filter(d => d.type === 'request' && (d.status === 'pending' || d.status === 'active'));
   requestedEmployeeIds = activeRequests.map(r => r.employeeId);
   if (selectedDepartment === 'متفرقه') {
-    availableEmployees = allData.filter(d => d.type === 'employee' && !requestedEmployeeIds.includes(d.employeeId)); 
+    availableEmployees = allData.filter(d => d.type === 'employee' && !requestedEmployeeIds.includes(d.employeeId));
     availableMotorcycles = allData.filter(d => d.type === 'motorcycle');
   } else {
-    availableEmployees = allData.filter(d => d.type === 'employee' && d.department === selectedDepartment && !requestedEmployeeIds.includes(d.employeeId)); 
+    availableEmployees = allData.filter(d => d.type === 'employee' && d.department === selectedDepartment && !requestedEmployeeIds.includes(d.employeeId));
     availableMotorcycles = allData.filter(d => d.type === 'motorcycle' && d.motorcycleDepartment === selectedDepartment);
   }
   employeeDisplay.textContent = availableEmployees.length > 0 ? 'کارمند را انتخاب کنید' : 'هیچ کارمندی در این دیپارتمنت یافت نشد';
@@ -1220,8 +1233,8 @@ function updateModalSelects(employees, motorcycles) {
 function populateEmployeeDropdown() {
   const searchTerm = document.getElementById('employee-search').value.toLowerCase();
   const activeRequests = allData.filter(d => d.type === 'request' && (d.status === 'pending' || d.status === 'active'));
-  requestedEmployeeIds = activeRequests.map(r => r.employeeId); 
-  const availableEmployeesForRequest = availableEmployees.filter(emp => !requestedEmployeeIds.includes(emp.employeeId)); 
+  requestedEmployeeIds = activeRequests.map(r => r.employeeId);
+  const availableEmployeesForRequest = availableEmployees.filter(emp => !requestedEmployeeIds.includes(emp.employeeId));
   const filteredEmployees = availableEmployeesForRequest.filter(emp =>
     emp.employeeName.toLowerCase().includes(searchTerm) ||
     String(emp.employeeId).toLowerCase().includes(searchTerm)
@@ -1237,7 +1250,7 @@ function populateEmployeeDropdown() {
   ).join('');
 }
 function searchEmployees() {
-  populateEmployeeDropdown(); 
+  populateEmployeeDropdown();
 }
 function toggleEmployeeDropdown() {
   if (document.getElementById('employee-select').disabled) return;
@@ -1792,7 +1805,7 @@ function filterRequests(filter) {
 function filterByDept(dept) {
   currentDeptFilter = dept;
   renderRequests(allData.filter(d => d.type === 'request'));
-  renderDeptFilters();  
+  renderDeptFilters();
 }
 function searchRequests() {
   currentRequestSearch = document.getElementById('request-search').value.trim();
