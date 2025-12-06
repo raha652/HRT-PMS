@@ -12,6 +12,7 @@ let allUsers = [];
 let currentRecordCount = 0;
 let currentPasswordType = '';
 let currentStatusFilter = 'all';
+let currentMotorcycleDeptFilter = 'all';
 let currentMotorcycleSearchTerm = '';
 let departments = [];
 let currentUserRole = '';
@@ -512,11 +513,13 @@ function updateCurrentPage() {
     case 'accounts':
       renderAccounts();
       break;
-    case 'motorcycle-status':
-      const motorcycles = allData.filter(d => d.type === 'motorcycle');
-      const requests = allData.filter(d => d.type === 'request');
-      renderMotorcycleStatus(motorcycles, requests);
-      break;
+case 'motorcycle-status':
+  const motorcycles = allData.filter(d => d.type === 'motorcycle');
+  const requests = allData.filter(d => d.type === 'request');
+  renderMotorcycleStatus(motorcycles, requests);
+  renderMotorcycleDeptFilters();  
+  break;
+      
     default:
       updateDashboard();
       break;
@@ -1111,7 +1114,7 @@ function renderMotorcycleStatus(motorcycles, requests) {
   let availableCount = 0;
   let pendingCount = 0;
   let inUseCount = 0;
-  const motorcycleStatusData = motorcycles.map(motorcycle => {
+  let motorcycleStatusData = motorcycles.map(motorcycle => {
     // Find active request for this motorcycle
     const activeRequest = requests.find(r =>
       r.motorcycleId === motorcycle.__backendId &&
@@ -1154,6 +1157,9 @@ function renderMotorcycleStatus(motorcycles, requests) {
     };
   });
   // Update summary counts
+  if (currentMotorcycleDeptFilter !== 'all') {
+  motorcycleStatusData = motorcycleStatusData.filter(data => data.motorcycle.motorcycleDepartment === currentMotorcycleDeptFilter);
+}
   if (document.getElementById('available-count')) document.getElementById('available-count').textContent = availableCount;
   if (document.getElementById('pending-count')) document.getElementById('pending-count').textContent = pendingCount;
   if (document.getElementById('in-use-count')) document.getElementById('in-use-count').textContent = inUseCount;
@@ -1854,17 +1860,16 @@ async function deleteRequest(requestId) {
   }
   const now = new Date();
   const currentTime = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
-  // تنظیم زمان ورود/خروج بر اساس وضعیت فعلی
-  let updatedExitTime = request.exitTime || currentTime; // اگر pending، خروج را حالا تنظیم کنیم
-  let updatedEntryTime = currentTime; // ورود را همیشه با زمان حذف تنظیم کنیم
+  let updatedExitTime = request.exitTime || currentTime; 
+  let updatedEntryTime = currentTime; 
   const updatedRequest = {
     ...request,
-    status: 'delet', // تغییر وضعیت به 'delet'
-    deleterFullName: window.currentUser.fullName || 'ناشناس', // نام حذف‌کننده
+    status: 'delet', 
+    deleterFullName: window.currentUser.fullName || 'ناشناس', 
     exitTime: updatedExitTime,
     entryTime: updatedEntryTime
   };
-  const result = await window.dataSdk.update(updatedRequest); // به جای delete، update
+  const result = await window.dataSdk.update(updatedRequest);
   if (result.isOk) {
     showToast('درخواست با موفقیت حذف (به وضعیت delet تغییر یافت)', '✅');
     if (getCurrentPage() === 'requests') {
@@ -1933,6 +1938,13 @@ function filterByDept(dept) {
   renderRequests(allData.filter(d => d.type === 'request'));
   renderDeptFilters();
 }
+function filterMotorcycleByDept(dept) {
+  // اضافه: remove کلاس فعال از همه دکمه‌ها قبل از تغییر
+  document.querySelectorAll('#dept-filters button').forEach(btn => btn.classList.remove('active-filter'));
+  
+  currentMotorcycleDeptFilter = dept;
+  updateCurrentPage();  // این renderMotorcycleDeptFilters را فراخوانی می‌کند و کلاس جدید اعمال می‌شود
+}
 function searchRequests() {
   currentRequestSearch = document.getElementById('request-search').value.trim();
   renderRequests(allData.filter(d => d.type === 'request'));
@@ -1943,6 +1955,20 @@ function renderDeptFilters() {
   let html = `<button id="dept-all" class="btn btn-dept text-sm whitespace-nowrap ${currentDeptFilter === 'all' ? 'active-filter' : ''}" onclick="filterByDept('all')">همه</button>`;
   departments.forEach(dept => {
     html += `<button class="btn btn-dept text-sm whitespace-nowrap ${currentDeptFilter === dept ? 'active-filter' : ''}" onclick="filterByDept('${dept}')">${dept}</button>`;
+  });
+  container.innerHTML = html;
+}
+function renderMotorcycleDeptFilters() {
+  const container = document.getElementById('dept-filters');
+  if (!container) return;
+  // چک برای departments خالی (اختیاری اما مفید)
+  if (departments.length === 0) {
+    container.innerHTML = '<p class="text-gray-300 text-sm whitespace-nowrap">هیچ دیپارتمنتی موجود نیست</p>';
+    return;
+  }
+  let html = `<button id="motor-dept-all" class="btn btn-dept text-sm whitespace-nowrap ${currentMotorcycleDeptFilter === 'all' ? 'active-filter' : ''}" onclick="filterMotorcycleByDept('all')">همه</button>`;
+  departments.forEach(dept => {
+    html += `<button class="btn btn-dept text-sm whitespace-nowrap ${currentMotorcycleDeptFilter === dept ? 'active-filter' : ''}" onclick="filterMotorcycleByDept('${dept}')">${dept}</button>`;
   });
   container.innerHTML = html;
 }
