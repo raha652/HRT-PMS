@@ -21,6 +21,7 @@ let historyToDate = '';
 let currentMotorcycleId = '';
 let currentRequestFilter = 'all';
 let currentRequestSearch = '';
+let accountSearchTerm = '';
 let currentDeptFilter = 'all';
 let requestedEmployeeIds = [];
 const JalaliDate = {
@@ -97,7 +98,8 @@ async function loadUsers() {
         username: 'admin',
         password: 'admin123',
         role: 'admin',
-        position: 'Electrical ENG' // موقعیت شغلی پیش‌فرض برای ادمین
+        position: 'Electrical ENG',
+        department: 'پاور' 
       };
       allUsers.push(defaultAdmin);
       await saveUsers();
@@ -130,9 +132,9 @@ async function createUser(userData) {
     return { isOk: false };
   }
   userData.__backendId = generateId();
-  allUsers.push(userData); // شامل position
+  allUsers.push(userData); 
   await saveUsers(allUsers);
-  const gsData = mapUserToGS(userData); // map باید position را شامل شود
+  const gsData = mapUserToGS(userData); 
   const gsResult = await callGoogleSheets('create', 'accounts', gsData);
   if (!gsResult.success) {
     showToast('خطا در ذخیره اکانت در Google Sheets', '❌');
@@ -168,21 +170,22 @@ async function deleteUser(userId) {
   }
   return { isOk: true };
 }
-async function updateUserRole(userId, newRole) {
+
+
+async function updateUser(userId, updatedData) {
   if (currentUserRole !== 'admin') {
-    showToast('شما دسترسی به ویرایش نقش اکانت ندارید', '⚠️');
+    showToast('شما دسترسی به ویرایش اکانت ندارید', '⚠️');
     return { isOk: false };
   }
-  const user = allUsers.find(u => u.__backendId === userId);
-  if (!user) return { isOk: false };
-  user.role = newRole;
+  const userIndex = allUsers.findIndex(u => u.__backendId === userId);
+  if (userIndex === -1) return { isOk: false };
+  allUsers[userIndex] = { ...allUsers[userIndex], ...updatedData };
   await saveUsers(allUsers);
-  const gsData = mapUserToGS(user);
+  const gsData = mapUserToGS(allUsers[userIndex]);
   const gsResult = await callGoogleSheets('update', 'accounts', gsData);
   if (!gsResult.success) {
     showToast('خطا در به‌روزرسانی اکانت در Google Sheets', '❌');
-    user.role = user.role === 'admin' ? 'admin' : 'user';
-    await saveUsers(allUsers);
+    // Rollback if needed
     return { isOk: false };
   }
   if (getCurrentPage() === 'accounts') {
@@ -190,6 +193,68 @@ async function updateUserRole(userId, newRole) {
   }
   return { isOk: true };
 }
+
+function openEditAccountModal(userId, username, fullName, password, role, position, department) {
+  if (currentUserRole !== 'admin') {
+    showToast('شما دسترسی به ویرایش اکانت ندارید', '⚠️');
+    return;
+  }
+  document.getElementById('edit-account-username').textContent = `اکانت: ${username}`;
+  document.getElementById('edit-account-fullname').value = fullName;
+  document.getElementById('edit-account-username-input').value = username;
+  document.getElementById('edit-account-password').value = password;
+  document.getElementById('edit-account-role').value = role;
+  document.getElementById('edit-account-position').value = position;
+  document.getElementById('edit-account-department').value = department; // فیلد جدید
+  document.getElementById('edit-account-form').dataset.userId = userId;
+  document.getElementById('edit-account-modal').classList.add('active');
+}
+
+async function submitEditAccount(event) {
+  event.preventDefault();
+  const userId = document.getElementById('edit-account-form').dataset.userId;
+  const fullName = document.getElementById('edit-account-fullname').value.trim();
+  const username = document.getElementById('edit-account-username-input').value.trim();
+  const password = document.getElementById('edit-account-password').value;
+  const role = document.getElementById('edit-account-role').value;
+  const position = document.getElementById('edit-account-position').value.trim();
+  const department = document.getElementById('edit-account-department').value.trim(); // فیلد جدید
+  if (!fullName || !username || !password || !role || !position || !department) {
+    showToast('لطفاً همه فیلدها را پر کنید', '⚠️');
+    return;
+  }
+  const updatedData = { fullName, username, password, role, position, department };
+  const result = await updateUser(userId, updatedData);
+  if (result.isOk) {
+    showToast('اکانت با موفقیت به‌روزرسانی شد', '✅');
+    closeModal('edit-account-modal');
+  } else {
+    showToast('خطا در به‌روزرسانی اکانت', '❌');
+  }
+}
+
+// async function updateUserRole(userId, newRole) {
+//   if (currentUserRole !== 'admin') {
+//     showToast('شما دسترسی به ویرایش نقش اکانت ندارید', '⚠️');
+//     return { isOk: false };
+//   }
+//   const user = allUsers.find(u => u.__backendId === userId);
+//   if (!user) return { isOk: false };
+//   user.role = newRole;
+//   await saveUsers(allUsers);
+//   const gsData = mapUserToGS(user);
+//   const gsResult = await callGoogleSheets('update', 'accounts', gsData);
+//   if (!gsResult.success) {
+//     showToast('خطا در به‌روزرسانی اکانت در Google Sheets', '❌');
+//     user.role = user.role === 'admin' ? 'admin' : 'user';
+//     await saveUsers(allUsers);
+//     return { isOk: false };
+//   }
+//   if (getCurrentPage() === 'accounts') {
+//     renderAccounts();
+//   }
+//   return { isOk: true };
+// }
 async function syncUsersWithGoogleSheets() {
   try {
     const result = await callGoogleSheets('readAll', 'accounts');
@@ -205,7 +270,8 @@ async function syncUsersWithGoogleSheets() {
           username: 'admin',
           password: 'admin123',
           role: 'admin',
-          position: 'Electrical ENG' // موقعیت شغلی پیش‌فرض برای ادمین
+          position: 'Electrical ENG',
+          department: 'پاور' 
         };
         gsUsers.push(defaultAdmin);
       }
@@ -464,19 +530,36 @@ function logout() {
   localStorage.removeItem('session');
   window.location.href = './login.html';
 }
+
+
 function renderAccounts() {
   const container = document.getElementById('accounts-list');
   if (!container) return;
-  if (allUsers.length === 0) {
-    container.innerHTML = '<div class="col-span-full text-center py-12 text-gray-300"><p class="text-lg">هیچ اکانتی ثبت نشده است</p></div>';
+  
+  // فیلتر بر اساس searchTerm
+  let filteredUsers = allUsers;
+  if (accountSearchTerm) {
+    const searchLower = accountSearchTerm.toLowerCase();
+    filteredUsers = allUsers.filter(user => 
+      user.fullName.toLowerCase().includes(searchLower) ||
+      user.username.toLowerCase().includes(searchLower) ||
+      user.role.toLowerCase().includes(searchLower) ||
+      (user.position || '').toLowerCase().includes(searchLower) ||
+      (user.department || '').toLowerCase().includes(searchLower)
+    );
+  }
+  
+  if (filteredUsers.length === 0) {
+    container.innerHTML = '<div class="col-span-full text-center py-12 text-gray-300"><p class="text-lg">هیچ اکانتی با جستجوی شما یافت نشد</p></div>';
     return;
   }
-  const userCards = allUsers.map(user => {
+  
+  const userCards = filteredUsers.map(user => {
     let actionButtons = '';
     if (currentUserRole === 'admin') {
       actionButtons = `
         <div class="flex items-center gap-2">
-          <button class="btn btn-primary px-3 py-1 text-sm" onclick="openEditRoleModal('${user.__backendId}', '${user.username}', '${user.role}')">✏️ ویرایش نقش</button>
+          <button class="btn btn-primary px-3 py-1 text-sm" onclick="openEditAccountModal('${user.__backendId}', '${user.username}', '${user.fullName}', '${user.password}', '${user.role}', '${user.position}', '${user.department || ''}')">✏️ ویرایش</button>
           <button class="delete-btn" onclick="deleteUser('${user.__backendId}')">🗑️ حذف</button>
         </div>
       `;
@@ -492,7 +575,8 @@ function renderAccounts() {
               <h3 class="text-lg font-bold text-white">${user.fullName}</h3>
               <p class="text-gray-200 mt-1">نام کاربری: ${user.username}</p>
               <p class="text-gray-200 mt-1">نقش: ${user.role === 'admin' ? 'ادمین' : 'کاربر'}</p>
-              <p class="text-gray-200 mt-1">موقعیت شغلی: ${user.position || 'نامشخص'}</p> <!-- نمایش موقعیت شغلی -->
+              <p class="text-gray-200 mt-1">موقعیت شغلی: ${user.position || 'نامشخص'}</p>
+              <p class="text-gray-200 mt-1">دیپارتمنت: ${user.department || 'نامشخص'}</p>
             </div>
           </div>
           ${actionButtons}
@@ -501,6 +585,7 @@ function renderAccounts() {
     `;
   }).join('');
   container.innerHTML = userCards;
+  
   const newAccountBtn = document.querySelector('button[onclick="openNewAccountModal()"]');
   if (newAccountBtn) {
     if (currentUserRole !== 'admin') {
@@ -510,6 +595,7 @@ function renderAccounts() {
     }
   }
 }
+
 function openNewAccountModal() {
   if (currentUserRole !== 'admin') {
     showToast('شما دسترسی به ایجاد اکانت ندارید', '⚠️');
@@ -518,28 +604,29 @@ function openNewAccountModal() {
   document.getElementById('new-account-form').reset();
   document.getElementById('new-account-modal').classList.add('active');
 }
-function openEditRoleModal(userId, username, currentRole) {
-  if (currentUserRole !== 'admin') {
-    showToast('شما دسترسی به ویرایش نقش ندارید', '⚠️');
-    return;
-  }
-  document.getElementById('edit-role-username').textContent = `اکانت: ${username}`;
-  document.getElementById('edit-role-select').value = currentRole;
-  document.getElementById('edit-role-form').dataset.userId = userId;
-  document.getElementById('edit-role-modal').classList.add('active');
-}
+// function openEditRoleModal(userId, username, currentRole) {
+//   if (currentUserRole !== 'admin') {
+//     showToast('شما دسترسی به ویرایش نقش ندارید', '⚠️');
+//     return;
+//   }
+//   document.getElementById('edit-role-username').textContent = `اکانت: ${username}`;
+//   document.getElementById('edit-role-select').value = currentRole;
+//   document.getElementById('edit-role-form').dataset.userId = userId;
+//   document.getElementById('edit-role-modal').classList.add('active');
+// }
 async function submitNewAccount(event) {
   event.preventDefault();
   const fullName = document.getElementById('account-fullname').value.trim();
   const username = document.getElementById('account-username').value.trim();
   const password = document.getElementById('account-password').value;
   const role = document.getElementById('account-role').value;
-  const position = document.getElementById('account-position').value.trim(); // فیلد جدید
-  if (!fullName || !username || !password || !role || !position) { // چک position
+  const position = document.getElementById('account-position').value.trim();
+  const department = document.getElementById('account-department').value.trim(); 
+  if (!fullName || !username || !password || !role || !position || !department) { 
     showToast('لطفاً همه فیلدها را پر کنید', '⚠️');
     return;
   }
-  const result = await createUser({ fullName, username, password, role, position }); // اضافه کردن position
+  const result = await createUser({ fullName, username, password, role, position, department }); 
   if (result.isOk) {
     showToast('اکانت با موفقیت اضافه شد', '✅');
     closeModal('new-account-modal');
@@ -547,18 +634,18 @@ async function submitNewAccount(event) {
     showToast('خطا در افزودن اکانت', '❌');
   }
 }
-async function submitRoleUpdate(event) {
-  event.preventDefault();
-  const userId = document.getElementById('edit-role-form').dataset.userId;
-  const newRole = document.getElementById('edit-role-select').value;
-  const result = await updateUserRole(userId, newRole);
-  if (result.isOk) {
-    showToast('نقش با موفقیت به‌روزرسانی شد', '✅');
-    closeModal('edit-role-modal');
-  } else {
-    showToast('خطا در به‌روزرسانی نقش', '❌');
-  }
-}
+// async function submitRoleUpdate(event) {
+//   event.preventDefault();
+//   const userId = document.getElementById('edit-role-form').dataset.userId;
+//   const newRole = document.getElementById('edit-role-select').value;
+//   const result = await updateUserRole(userId, newRole);
+//   if (result.isOk) {
+//     showToast('نقش با موفقیت به‌روزرسانی شد', '✅');
+//     closeModal('edit-role-modal');
+//   } else {
+//     showToast('خطا در به‌روزرسانی نقش', '❌');
+//   }
+// }
 async function initApp() {
   showLoading(); // نمایش لودینگ در ابتدای initApp
   const sessionStr = localStorage.getItem('session');
@@ -673,23 +760,31 @@ async function initApp() {
     const searchButton = document.querySelector('button[onclick="filterHistory()"]');
     if (historySearchInput) {
       historySearchInput.addEventListener('input', () => {
-        filterHistory(); // جستجوی اتوماتیک با تایپ
+        filterHistory(); 
       });
     }
     if (historyFromDate) {
       historyFromDate.addEventListener('change', () => {
-        filterHistory(); // بروزرسانی اتوماتیک با تغییر تاریخ
+        filterHistory(); 
       });
     }
     if (historyToDate) {
       historyToDate.addEventListener('change', () => {
-        filterHistory(); // بروزرسانی اتوماتیک با تغییر تاریخ
+        filterHistory(); 
       });
     }
     if (searchButton) {
-      searchButton.classList.add('hidden'); // hidden کردن دکمه جستجو
+      searchButton.classList.add('hidden'); 
     }
   }
+  
+const accountSearchInput = document.getElementById('account-search');
+if (accountSearchInput) {
+  accountSearchInput.addEventListener('input', () => {
+    accountSearchTerm = accountSearchInput.value.trim().toLowerCase();
+    renderAccounts();
+  });
+}
   const searchInput = document.getElementById('motorcycle-status-search');
   const searchBtn = document.getElementById('motorcycle-status-search-btn');
   if (searchBtn && searchInput) {
