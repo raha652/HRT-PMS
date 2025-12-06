@@ -425,11 +425,11 @@ transform: scale-105;
   background: linear-gradient(135deg, #6d28d9 0%, #4c1d95 100%);  /* بنفش برای دپارتمان‌ها */
 }
 
-/* بهبود کلاس فعال */
+
 .active-filter {
   box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.8) !important;
   transform: scale(1.05);
-  border: 1px solid #ffffff;  /* border سفید برای برجسته شدن */
+  border: 1px solid #ffffff;  
 }
 
 .input-field {
@@ -441,7 +441,54 @@ transform: scale-105;
   transition: all 0.3s ease;
   background: white;
 }
-@keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+
+.motorbike-loader {
+  position: relative;
+  font-size: 80px;             
+  margin-bottom: 0.1px;
+  animation: vibrate 0.7s ease-in-out infinite;  
 }
+
+.motorbike-loader .bike {
+  display: inline-block;
+  animation: bounce 1.4s infinite;   
+}
+
+
+@keyframes vibrate {
+  0%, 100% { transform: translateX(0) translateY(0) rotate(0deg); }
+  25% { transform: translateX(-3px) translateY(-2px) rotate(-2deg); }
+  75% { transform: translateX(3px) translateY(1px) rotate(2deg); }
+}
+
+
+@keyframes bounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
+}
+
+
+
+@keyframes smoke {
+  0%   { 
+    transform: translateX(0) translateY(0) scale(0.6); 
+    opacity: 0.9; 
+  }
+  100% { 
+    transform: translateX(90px) translateY(-25px) scale(1.6);  
+    opacity: 0; 
+  }
+}
+
+.smoke {
+  position: absolute;
+  font-size: 32px;
+  bottom: 22px;     
+  right: 18px;       
+  pointer-events: none;
+}
+
+
+.smoke1 { animation: smoke 1.4s infinite ease-out 0s; }
+.smoke2 { animation: smoke 1.6s infinite ease-out 0.4s; font-size: 28px; }
+.smoke3 { animation: smoke 1.8s infinite ease-out 0.8s; font-size: 36px; }
