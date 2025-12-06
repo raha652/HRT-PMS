@@ -225,6 +225,7 @@ async function syncRequestsWithGoogleSheets(allDataRef) {
     return false;
   }
 }
+
 function mapUserToGS(item) {
   return {
     'Unique ID': item.__backendId,
@@ -232,9 +233,11 @@ function mapUserToGS(item) {
     'نام کاربری': item.username,
     'رمز عبور': item.password,
     'نقش': item.role,
-    'موقعیت شغلی': item.position || 'نامشخص'  
+    'موقعیت شغلی': item.position || 'نامشخص',
+    'دیپارتمنت': item.department || 'نامشخص' 
   };
 }
+
 function mapGSToUser(record) {
   return {
     __backendId: record['Unique ID'],
@@ -242,6 +245,7 @@ function mapGSToUser(record) {
     username: record['نام کاربری'],
     password: record['رمز عبور'],
     role: record['نقش'],
-    position: record['موقعیت شغلی'] || 'نامشخص'  
+    position: record['موقعیت شغلی'] || 'نامشخص',
+    department: record['دیپارتمنت'] || 'نامشخص' 
   };
 }
