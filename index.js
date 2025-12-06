@@ -99,7 +99,7 @@ async function loadUsers() {
         password: 'admin123',
         role: 'admin',
         position: 'Electrical ENG',
-        department: 'پاور' 
+        department: 'پاور'
       };
       allUsers.push(defaultAdmin);
       await saveUsers();
@@ -132,9 +132,9 @@ async function createUser(userData) {
     return { isOk: false };
   }
   userData.__backendId = generateId();
-  allUsers.push(userData); 
+  allUsers.push(userData);
   await saveUsers(allUsers);
-  const gsData = mapUserToGS(userData); 
+  const gsData = mapUserToGS(userData);
   const gsResult = await callGoogleSheets('create', 'accounts', gsData);
   if (!gsResult.success) {
     showToast('خطا در ذخیره اکانت در Google Sheets', '❌');
@@ -271,7 +271,7 @@ async function syncUsersWithGoogleSheets() {
           password: 'admin123',
           role: 'admin',
           position: 'Electrical ENG',
-          department: 'پاور' 
+          department: 'پاور'
         };
         gsUsers.push(defaultAdmin);
       }
@@ -535,12 +535,12 @@ function logout() {
 function renderAccounts() {
   const container = document.getElementById('accounts-list');
   if (!container) return;
-  
+
   // فیلتر بر اساس searchTerm
   let filteredUsers = allUsers;
   if (accountSearchTerm) {
     const searchLower = accountSearchTerm.toLowerCase();
-    filteredUsers = allUsers.filter(user => 
+    filteredUsers = allUsers.filter(user =>
       user.fullName.toLowerCase().includes(searchLower) ||
       user.username.toLowerCase().includes(searchLower) ||
       user.role.toLowerCase().includes(searchLower) ||
@@ -548,12 +548,12 @@ function renderAccounts() {
       (user.department || '').toLowerCase().includes(searchLower)
     );
   }
-  
+
   if (filteredUsers.length === 0) {
     container.innerHTML = '<div class="col-span-full text-center py-12 text-gray-300"><p class="text-lg">هیچ اکانتی با جستجوی شما یافت نشد</p></div>';
     return;
   }
-  
+
   const userCards = filteredUsers.map(user => {
     let actionButtons = '';
     if (currentUserRole === 'admin') {
@@ -585,7 +585,7 @@ function renderAccounts() {
     `;
   }).join('');
   container.innerHTML = userCards;
-  
+
   const newAccountBtn = document.querySelector('button[onclick="openNewAccountModal()"]');
   if (newAccountBtn) {
     if (currentUserRole !== 'admin') {
@@ -621,12 +621,12 @@ async function submitNewAccount(event) {
   const password = document.getElementById('account-password').value;
   const role = document.getElementById('account-role').value;
   const position = document.getElementById('account-position').value.trim();
-  const department = document.getElementById('account-department').value.trim(); 
-  if (!fullName || !username || !password || !role || !position || !department) { 
+  const department = document.getElementById('account-department').value.trim();
+  if (!fullName || !username || !password || !role || !position || !department) {
     showToast('لطفاً همه فیلدها را پر کنید', '⚠️');
     return;
   }
-  const result = await createUser({ fullName, username, password, role, position, department }); 
+  const result = await createUser({ fullName, username, password, role, position, department });
   if (result.isOk) {
     showToast('اکانت با موفقیت اضافه شد', '✅');
     closeModal('new-account-modal');
@@ -760,31 +760,31 @@ async function initApp() {
     const searchButton = document.querySelector('button[onclick="filterHistory()"]');
     if (historySearchInput) {
       historySearchInput.addEventListener('input', () => {
-        filterHistory(); 
+        filterHistory();
       });
     }
     if (historyFromDate) {
       historyFromDate.addEventListener('change', () => {
-        filterHistory(); 
+        filterHistory();
       });
     }
     if (historyToDate) {
       historyToDate.addEventListener('change', () => {
-        filterHistory(); 
+        filterHistory();
       });
     }
     if (searchButton) {
-      searchButton.classList.add('hidden'); 
+      searchButton.classList.add('hidden');
     }
   }
-  
-const accountSearchInput = document.getElementById('account-search');
-if (accountSearchInput) {
-  accountSearchInput.addEventListener('input', () => {
-    accountSearchTerm = accountSearchInput.value.trim().toLowerCase();
-    renderAccounts();
-  });
-}
+
+  const accountSearchInput = document.getElementById('account-search');
+  if (accountSearchInput) {
+    accountSearchInput.addEventListener('input', () => {
+      accountSearchTerm = accountSearchInput.value.trim().toLowerCase();
+      renderAccounts();
+    });
+  }
   const searchInput = document.getElementById('motorcycle-status-search');
   const searchBtn = document.getElementById('motorcycle-status-search-btn');
   if (searchBtn && searchInput) {
@@ -1245,16 +1245,20 @@ function filterHistory(completedRequests) {
 function populateDepartmentDropdown() {
   const optionsContainer = document.getElementById('department-options');
   if (!optionsContainer) return;
+
   if (availableDepartments.length === 0) {
     optionsContainer.innerHTML = '<div class="p-3 text-gray-500 text-center">هیچ دیپارتمنتی ثبت نشده است. ابتدا موتور سکیل اضافه کنید.</div>';
     return;
   }
+
+  // تغییر: نمایش فقط departmentهای مجاز بر اساس کاربر (availableDepartments قبلاً فیلتر شده)
   optionsContainer.innerHTML = availableDepartments.map(dept =>
     `<div class="p-3 hover:bg-gray-100 cursor-pointer border-b border-gray-100 last:border-b-0" onclick="selectDepartment('${dept}')">${dept}</div>`
   ).join('');
 }
 function searchDepartments() {
   const searchTerm = document.getElementById('department-search').value.toLowerCase();
+  // تغییر: فیلتر روی availableDepartments (که قبلاً بر اساس کاربر محدود شده)
   const filteredDepartments = availableDepartments.filter(dept => dept.toLowerCase().includes(searchTerm));
   const optionsContainer = document.getElementById('department-options');
   if (!optionsContainer) return;
@@ -1293,6 +1297,7 @@ function filterByDepartment() {
   const motorcycleSelect = document.getElementById('motorcycle-select');
   const employeeDisplay = document.getElementById('employee-display');
   const motorcycleDisplay = document.getElementById('motorcycle-display');
+
   if (!selectedDepartment) {
     employeeSelect.disabled = true;
     motorcycleSelect.disabled = true;
@@ -1302,15 +1307,28 @@ function filterByDepartment() {
     motorcycleDisplay.textContent = 'ابتدا دیپارتمنت را انتخاب کنید';
     return;
   }
+
   const activeRequests = allData.filter(d => d.type === 'request' && (d.status === 'pending' || d.status === 'active'));
   requestedEmployeeIds = activeRequests.map(r => r.employeeId);
+
+  // تغییر: منطق خاص برای "متفرقه" بر اساس department کاربر
+  const userDept = window.currentUser.department || '';
   if (selectedDepartment === 'متفرقه') {
-    availableEmployees = allData.filter(d => d.type === 'employee' && !requestedEmployeeIds.includes(d.employeeId));
-    availableMotorcycles = allData.filter(d => d.type === 'motorcycle');
+    if (userDept !== 'BDT' && userDept !== 'همه') {
+      // اگر department کاربر نه BDT و نه همه: همه کارمندان، اما فقط موتورهای department خودش
+      availableEmployees = allData.filter(d => d.type === 'employee' && !requestedEmployeeIds.includes(d.employeeId));
+      availableMotorcycles = allData.filter(d => d.type === 'motorcycle' && d.motorcycleDepartment === userDept);
+    } else {
+      // اگر BDT یا همه: همه کارمندان و همه موتورها
+      availableEmployees = allData.filter(d => d.type === 'employee' && !requestedEmployeeIds.includes(d.employeeId));
+      availableMotorcycles = allData.filter(d => d.type === 'motorcycle');
+    }
   } else {
+    // منطق قبلی برای departmentهای غیر متفرقه
     availableEmployees = allData.filter(d => d.type === 'employee' && d.department === selectedDepartment && !requestedEmployeeIds.includes(d.employeeId));
     availableMotorcycles = allData.filter(d => d.type === 'motorcycle' && d.motorcycleDepartment === selectedDepartment);
   }
+
   employeeDisplay.textContent = availableEmployees.length > 0 ? 'کارمند را انتخاب کنید' : 'هیچ کارمندی در این دیپارتمنت یافت نشد';
   motorcycleDisplay.textContent = availableMotorcycles.length > 0 ? 'موتور سکیل را انتخاب کنید' : 'هیچ موتور سکیلی در این دیپارتمنت یافت نشد';
   employeeSelect.disabled = false;
@@ -1327,7 +1345,18 @@ let availableEmployees = [];
 let availableMotorcycles = [];
 function updateModalSelects(employees, motorcycles) {
   const uniqueDepts = [...new Set([...employees.map(e => e.department), ...motorcycles.map(m => m.motorcycleDepartment)])].sort();
-  availableDepartments = ['متفرقه', ...uniqueDepts];
+
+  // تغییر: فیلتر departmentها بر اساس department کاربر
+  const userDept = window.currentUser.department || ''; // department کاربر فعلی
+  if (userDept === 'BDT' || userDept === 'همه') {
+    availableDepartments = ['متفرقه', ...uniqueDepts];
+  } else {
+    availableDepartments = ['متفرقه']; // همیشه "متفرقه" را نشان بده
+    if (uniqueDepts.includes(userDept)) {
+      availableDepartments.push(userDept); // فقط department خودش را اضافه کن
+    }
+  }
+
   populateDepartmentDropdown();
 }
 function populateEmployeeDropdown() {
