@@ -51,8 +51,12 @@
   </div>
   <input type="text" id="request-search" class="input-field w-24 text-sm mr-4 text-gray-700 mt-0" placeholder="جستجو بر اساس نام، دیپارتمنت، موتور سکیل و ..." oninput="searchRequests()">
  </div>
- <div id="dept-filters" class="flex gap-2 mb-4 overflow-x-auto w-full px-0 justify-start items-center min-h-10 py-1"></div>
-     <!-- <div id="dept-filters" class="flex gap-2 mb-4 overflow-x-auto"></div> -->
+ <div class="card p-4 mb-6">
+   <div class="flex items-center gap-4 flex-nowrap">
+  <span class="text-white font-semibold whitespace-nowrap">فیلتر بر اساس دیپارتمنت:</span>
+ <div id="dept-filters" class="flex gap-2 mb-4 overflow-x-auto w-full px-2 justify-start items-center min-h-10 py-2"></div>
+      </div>
+      </div>
      <div id="requests-list" class="space-y-4"></div>
     </div>
    </div>
