@@ -25,13 +25,11 @@ let currentRequestSearch = '';
 let accountSearchTerm = '';
 let currentDeptFilter = 'all';
 let requestedEmployeeIds = [];
-
 async function syncAllData() {
   try {
     await syncEmployeesWithGoogleSheets(allData);
     await syncMotorcyclesWithGoogleSheets(allData);
     await syncRequestsWithGoogleSheets(allData);
-    // آپدیت localStorage و UI
     await saveData(allData);
     dataHandler.onDataChanged(allData);
     console.log('Data synced successfully');
@@ -40,7 +38,6 @@ async function syncAllData() {
     showToast('خطا در همگام‌سازی داده‌ها', '⚠️');
   }
 }
-
 const JalaliDate = {
   g_days_in_month: [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31],
   j_days_in_month: [31, 31, 31, 31, 31, 31, 30, 30, 30, 30, 30, 29]
@@ -87,6 +84,22 @@ const usersStorageKey = 'userAccountsData';
 function generateId() {
   return Date.now().toString() + Math.random().toString(36).substr(2, 9);
 }
+
+function calculateUsageTime(exitTime, entryTime) {
+  if (!exitTime || !entryTime) return '';  
+  const [exitH, exitM] = exitTime.split(':').map(Number);
+  const [entryH, entryM] = entryTime.split(':').map(Number);
+  const exitMinutes = exitH * 60 + exitM;
+  const entryMinutes = entryH * 60 + entryM;
+  let diffMinutes = entryMinutes - exitMinutes;
+  if (diffMinutes < 0) {
+    diffMinutes += 24 * 60;  
+  }
+  const hours = Math.floor(diffMinutes / 60);
+  const minutes = diffMinutes % 60;
+  return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+}
+
 async function loadData() {
   try {
     const stored = localStorage.getItem(dataStorageKey);
@@ -96,6 +109,7 @@ async function loadData() {
     return [];
   }
 }
+
 async function saveData(data) {
   try {
     localStorage.setItem(dataStorageKey, JSON.stringify(data));
@@ -104,6 +118,7 @@ async function saveData(data) {
     showToast('خطا در ذخیره داده‌ها', '❌');
   }
 }
+
 async function loadUsers() {
   try {
     const stored = localStorage.getItem(usersStorageKey);
@@ -131,6 +146,7 @@ async function loadUsers() {
     return [];
   }
 }
+
 async function saveUsers(users) {
   try {
     localStorage.setItem(usersStorageKey, JSON.stringify(users));
@@ -139,6 +155,7 @@ async function saveUsers(users) {
     showToast('خطا در ذخیره کاربران', '❌');
   }
 }
+
 async function createUser(userData) {
   if (currentUserRole !== 'admin') {
     showToast('شما دسترسی به ایجاد اکانت ندارید', '⚠️');
@@ -164,6 +181,7 @@ async function createUser(userData) {
   }
   return { isOk: true };
 }
+
 async function deleteUser(userId) {
   if (currentUserRole !== 'admin') {
     showToast('شما دسترسی به حذف اکانت ندارید', '⚠️');
@@ -188,7 +206,6 @@ async function deleteUser(userId) {
   return { isOk: true };
 }
 
-
 async function updateUser(userId, updatedData) {
   if (currentUserRole !== 'admin') {
     showToast('شما دسترسی به ویرایش اکانت ندارید', '⚠️');
@@ -202,7 +219,6 @@ async function updateUser(userId, updatedData) {
   const gsResult = await callGoogleSheets('update', 'accounts', gsData);
   if (!gsResult.success) {
     showToast('خطا در به‌روزرسانی اکانت در Google Sheets', '❌');
-    // Rollback if needed
     return { isOk: false };
   }
   if (getCurrentPage() === 'accounts') {
@@ -222,7 +238,7 @@ function openEditAccountModal(userId, username, fullName, password, role, positi
   document.getElementById('edit-account-password').value = password;
   document.getElementById('edit-account-role').value = role;
   document.getElementById('edit-account-position').value = position;
-  document.getElementById('edit-account-department').value = department; // فیلد جدید
+  document.getElementById('edit-account-department').value = department;
   document.getElementById('edit-account-form').dataset.userId = userId;
   document.getElementById('edit-account-modal').classList.add('active');
 }
@@ -235,7 +251,7 @@ async function submitEditAccount(event) {
   const password = document.getElementById('edit-account-password').value;
   const role = document.getElementById('edit-account-role').value;
   const position = document.getElementById('edit-account-position').value.trim();
-  const department = document.getElementById('edit-account-department').value.trim(); // فیلد جدید
+  const department = document.getElementById('edit-account-department').value.trim(); 
   if (!fullName || !username || !password || !role || !position || !department) {
     showToast('لطفاً همه فیلدها را پر کنید', '⚠️');
     return;
@@ -250,28 +266,6 @@ async function submitEditAccount(event) {
   }
 }
 
-// async function updateUserRole(userId, newRole) {
-//   if (currentUserRole !== 'admin') {
-//     showToast('شما دسترسی به ویرایش نقش اکانت ندارید', '⚠️');
-//     return { isOk: false };
-//   }
-//   const user = allUsers.find(u => u.__backendId === userId);
-//   if (!user) return { isOk: false };
-//   user.role = newRole;
-//   await saveUsers(allUsers);
-//   const gsData = mapUserToGS(user);
-//   const gsResult = await callGoogleSheets('update', 'accounts', gsData);
-//   if (!gsResult.success) {
-//     showToast('خطا در به‌روزرسانی اکانت در Google Sheets', '❌');
-//     user.role = user.role === 'admin' ? 'admin' : 'user';
-//     await saveUsers(allUsers);
-//     return { isOk: false };
-//   }
-//   if (getCurrentPage() === 'accounts') {
-//     renderAccounts();
-//   }
-//   return { isOk: true };
-// }
 async function syncUsersWithGoogleSheets() {
   try {
     const result = await callGoogleSheets('readAll', 'accounts');
@@ -426,6 +420,7 @@ window.dataSdk = {
     return { isOk: true };
   }
 };
+
 function updateDepartments() {
   const uniqueDepartments = [...new Set(allData.filter(d => d.type === 'motorcycle').map(d => d.motorcycleDepartment))];
   departments = uniqueDepartments.sort();
@@ -441,12 +436,10 @@ const dataHandler = {
     allData = data;
     currentRecordCount = data.length;
     updateDepartments();
-    updateCurrentPage();  // این UI را بدون ریفرش آپدیت می‌کند
-    // اگر در صفحه درخواست هستید، لیست را دوباره رندر کنید
+    updateCurrentPage(); 
     if (getCurrentPage() === 'requests') {
       renderRequests(allData.filter(d => d.type === 'request'));
     }
-    // مشابه برای صفحات دیگر اگر نیاز باشد
 if (getCurrentPage() === 'history') {
   const allCompleted = allData.filter(d => d.type === 'request' && (d.status === 'completed' || d.status === 'delet'));
   renderHistory(filterHistory(allCompleted));
@@ -457,11 +450,12 @@ if (getCurrentPage() === 'motorcycle-status') {
   renderMotorcycleStatus(motorcycles, requests);
 }
   }
-
 };
+
 function navigateTo(path) {
   window.location.href = path;
 }
+
 function getCurrentPage() {
   const path = window.location.pathname;
   if (path.includes('requests')) return 'requests';
@@ -475,18 +469,21 @@ function getCurrentPage() {
   if (path.includes('profile-settings')) return 'profile-settings';
   return 'dashboard';
 }
+
 function showLoading() {
   const loadingElement = document.getElementById('loading-overlay');
   if (loadingElement) {
     loadingElement.style.display = 'flex';
   }
 }
+
 function hideLoading() {
   const loadingElement = document.getElementById('loading-overlay');
   if (loadingElement) {
     loadingElement.style.display = 'none';
   }
 }
+
 async function loadAndSyncDataForPage(page) {
   try {
     switch (page) {
@@ -499,12 +496,12 @@ async function loadAndSyncDataForPage(page) {
       case 'requests':
       case 'request-menu':
         await syncEmployeesWithGoogleSheets(allData);
-        await syncMotorcyclesWithGoogleSheets(allData); // برای depts
+        await syncMotorcyclesWithGoogleSheets(allData); 
         await syncRequestsWithGoogleSheets(allData);
         break;
       case 'history':
       case 'motorcycle-status':
-        await syncMotorcyclesWithGoogleSheets(allData); // برای depts
+        await syncMotorcyclesWithGoogleSheets(allData); 
         await syncRequestsWithGoogleSheets(allData);
         break;
       case 'motorcycles':
@@ -524,6 +521,7 @@ async function loadAndSyncDataForPage(page) {
     console.error('Error in loadAndSyncDataForPage:', error);
   }
 }
+
 function updateCurrentPage() {
   const page = getCurrentPage();
   switch (page) {
@@ -548,14 +546,15 @@ case 'motorcycle-status':
   const motorcycles = allData.filter(d => d.type === 'motorcycle');
   const requests = allData.filter(d => d.type === 'request');
   renderMotorcycleStatus(motorcycles, requests);
-  renderMotorcycleDeptFilters();  
+  renderMotorcycleDeptFilters();
   break;
-      
+     
     default:
       updateDashboard();
       break;
   }
 }
+
 function logout() {
   if (window.idleInterval) {
     clearInterval(window.idleInterval);
@@ -565,12 +564,9 @@ function logout() {
   window.location.href = './login.html';
 }
 
-
 function renderAccounts() {
   const container = document.getElementById('accounts-list');
   if (!container) return;
-
-  // فیلتر بر اساس searchTerm
   let filteredUsers = allUsers;
   if (accountSearchTerm) {
     const searchLower = accountSearchTerm.toLowerCase();
@@ -582,12 +578,10 @@ function renderAccounts() {
       (user.department || '').toLowerCase().includes(searchLower)
     );
   }
-
   if (filteredUsers.length === 0) {
     container.innerHTML = '<div class="col-span-full text-center py-12 text-gray-300"><p class="text-lg">هیچ اکانتی با جستجوی شما یافت نشد</p></div>';
     return;
   }
-
   const userCards = filteredUsers.map(user => {
     let actionButtons = '';
     if (currentUserRole === 'admin') {
@@ -619,7 +613,6 @@ function renderAccounts() {
     `;
   }).join('');
   container.innerHTML = userCards;
-
   const newAccountBtn = document.querySelector('button[onclick="openNewAccountModal()"]');
   if (newAccountBtn) {
     if (currentUserRole !== 'admin') {
@@ -638,16 +631,7 @@ function openNewAccountModal() {
   document.getElementById('new-account-form').reset();
   document.getElementById('new-account-modal').classList.add('active');
 }
-// function openEditRoleModal(userId, username, currentRole) {
-//   if (currentUserRole !== 'admin') {
-//     showToast('شما دسترسی به ویرایش نقش ندارید', '⚠️');
-//     return;
-//   }
-//   document.getElementById('edit-role-username').textContent = `اکانت: ${username}`;
-//   document.getElementById('edit-role-select').value = currentRole;
-//   document.getElementById('edit-role-form').dataset.userId = userId;
-//   document.getElementById('edit-role-modal').classList.add('active');
-// }
+
 async function submitNewAccount(event) {
   event.preventDefault();
   const fullName = document.getElementById('account-fullname').value.trim();
@@ -668,20 +652,9 @@ async function submitNewAccount(event) {
     showToast('خطا در افزودن اکانت', '❌');
   }
 }
-// async function submitRoleUpdate(event) {
-//   event.preventDefault();
-//   const userId = document.getElementById('edit-role-form').dataset.userId;
-//   const newRole = document.getElementById('edit-role-select').value;
-//   const result = await updateUserRole(userId, newRole);
-//   if (result.isOk) {
-//     showToast('نقش با موفقیت به‌روزرسانی شد', '✅');
-//     closeModal('edit-role-modal');
-//   } else {
-//     showToast('خطا در به‌روزرسانی نقش', '❌');
-//   }
-// }
+
 async function initApp() {
-  showLoading(); // نمایش لودینگ در ابتدای initApp
+  showLoading(); 
   const sessionStr = localStorage.getItem('session');
   if (!sessionStr) {
     window.location.href = './login.html';
@@ -719,7 +692,7 @@ async function initApp() {
     document.getElementById('current-user').textContent = currentUser.fullName || "کاربر ناشناس";
   }
   if (document.getElementById('current-user-position')) {
-    document.getElementById('current-user-position').textContent = currentUser.position || "نامشخص"; // ست موقعیت شغلی
+    document.getElementById('current-user-position').textContent = currentUser.position || "نامشخص"; 
   }
   const userIcon = document.getElementById('user-profile-icon');
   if (userIcon) {
@@ -741,13 +714,13 @@ async function initApp() {
   }
   updateDateTime();
   setInterval(updateDateTime, 60000);
-  hideLoading(); // پنهان کردن لودینگ بعد از تنظیم هدر
+  hideLoading(); 
   const initResult = await window.dataSdk.init(dataHandler);
   if (!initResult.isOk) {
     showToast('خطا در بارگذاری داده‌ها', '❌');
   }
   const page = getCurrentPage();
-  await loadAndSyncDataForPage(page); // lazy sync بر اساس صفحه
+  await loadAndSyncDataForPage(page); 
   if (window.elementSdk && typeof window.elementSdk.init === 'function') {
     await window.elementSdk.init({
       defaultConfig,
@@ -811,7 +784,6 @@ async function initApp() {
       searchButton.classList.add('hidden');
     }
   }
-
   const accountSearchInput = document.getElementById('account-search');
   if (accountSearchInput) {
     accountSearchInput.addEventListener('input', () => {
@@ -832,8 +804,7 @@ async function initApp() {
     });
   }
   setupIdleLogout();
-  // Polling هر ۱۵ ثانیه برای sync داده‌ها (بدون ریفرش صفحه)
-setInterval(syncAllData, 5000);  // ۱۵ ثانیه - می‌توانید به ۱۰۰۰۰ (۱۰ ثانیه) یا ۳۰۰۰۰ (۳۰ ثانیه) تغییر دهید
+setInterval(syncAllData, 5000); 
 }
 function setupIdleLogout() {
   if (typeof window.idleTime === 'undefined') {
@@ -868,6 +839,7 @@ function setupIdleLogout() {
     document.addEventListener(event, resetIdleTimeLocal, true);
   });
 }
+
 function updateDateTime() {
   const now = new Date();
   const weekday = now.toLocaleString('en-US', { weekday: 'short' });
@@ -877,6 +849,7 @@ function updateDateTime() {
   const formatted = `${weekday}, ${month}, ${day}, ${year}`;
   document.getElementById('current-date').textContent = formatted;
 }
+
 function updateDashboard() {
   const motorcycles = allData.filter(d => d.type === 'motorcycle');
   const employees = allData.filter(d => d.type === 'employee');
@@ -896,20 +869,17 @@ function updateDashboard() {
     updateModalSelects(employees, motorcycles);
   }
 }
+
 function renderRequests(requests) {
   const container = document.getElementById('requests-list');
   if (!container) return;
-  // Filter active and pending requests (exclude completed and delet)
   let filteredRequests = requests.filter(r => r.status === 'pending' || r.status === 'active');
-  // Apply status filter
   if (currentRequestFilter !== 'all') {
     filteredRequests = filteredRequests.filter(r => r.status === currentRequestFilter);
   }
-  // Apply department filter
   if (currentDeptFilter !== 'all') {
     filteredRequests = filteredRequests.filter(r => r.motorcycleDepartment === currentDeptFilter);
   }
-  // Apply search
   if (currentRequestSearch) {
     const searchLower = currentRequestSearch.toLowerCase();
     filteredRequests = filteredRequests.filter(r =>
@@ -1065,12 +1035,10 @@ function showMotorcycleDetails(motorcycleId) {
   `;
   document.getElementById('motorcycle-details-content').innerHTML = content;
   document.getElementById('motorcycle-details-modal').classList.add('active');
-  // اتصال دکمه ویرایش
   document.getElementById('edit-from-details-btn').onclick = () => {
     closeModal('motorcycle-details-modal');
     openEditMotorcycleModal(motorcycleId);
   };
-  // اتصال دکمه حذف
   document.getElementById('delete-from-details-btn').onclick = () => {
     deleteMotorcycle(motorcycleId);
     closeModal('motorcycle-details-modal');
@@ -1123,11 +1091,12 @@ function renderHistory(filteredRequests) {
             <p class="text-gray-200 mt-1">👤 ${request.employeeName} ( ${request.department})</p>
             <p class="text-gray-200 mt-1">🆔 درخواست کننده: ${request.requesterFullName || 'ناشناس'}</p>
             ${request.deleterFullName ? `<p class="text-gray-200 mt-1">🗑️ حذف‌کننده: ${request.deleterFullName}</p>` : ''}
-            <div class="flex gap-6 mt-2 text-sm text-gray-100">
-              <span>📅 ${request.requestDate}</span>
-              <span>🚀 خروج: ${request.exitTime}</span>
-              <span>🏁 ورود: ${request.entryTime}</span>
-            </div>
+<div class="flex gap-6 mt-2 text-sm text-gray-100">
+  <span>📅 ${request.requestDate}</span>
+  <span>🚀 خروج: ${request.exitTime}</span>
+  <span>🏁 ورود: ${request.entryTime}</span>
+  <span>⏱ مدت زمان استفاده: ${formatUsageTime(request.usageTime) || 'نامشخص'}</span>
+</div>
           </div>
         </div>
         <span class="status-badge ${request.status === 'completed' ? 'status-completed' : (request.status === 'delet' ? 'status-deleted' : '')}">
@@ -1148,14 +1117,12 @@ function renderMotorcycleStatus(motorcycles, requests) {
   let pendingCount = 0;
   let inUseCount = 0;
   let motorcycleStatusData = motorcycles.map(motorcycle => {
-    // Find active request for this motorcycle
     const activeRequest = requests.find(r =>
       r.motorcycleId === motorcycle.__backendId &&
       (r.status === 'pending' || r.status === 'active')
     );
     let status, statusClass, statusIcon, statusText, employeeInfo;
     if (!activeRequest) {
-      // Available in parking
       status = 'available';
       statusClass = 'bg-gradient-to-br from-green-500/20 to-emerald-600/20 border-green-400/30';
       statusIcon = '🅿️';
@@ -1163,7 +1130,6 @@ function renderMotorcycleStatus(motorcycles, requests) {
       employeeInfo = '';
       availableCount++;
     } else if (activeRequest.status === 'pending') {
-      // Waiting for exit
       status = 'pending';
       statusClass = 'bg-gradient-to-br from-yellow-500/20 to-orange-600/20 border-yellow-400/30';
       statusIcon = '⏳';
@@ -1171,7 +1137,6 @@ function renderMotorcycleStatus(motorcycles, requests) {
       employeeInfo = `👤 ${activeRequest.employeeName}`;
       pendingCount++;
     } else if (activeRequest.status === 'active') {
-      // In use
       status = 'in-use';
       statusClass = 'bg-gradient-to-br from-red-500/20 to-pink-600/20 border-red-400/30';
       statusIcon = '🔄';
@@ -1189,14 +1154,12 @@ function renderMotorcycleStatus(motorcycles, requests) {
       activeRequest
     };
   });
-  // Update summary counts
   if (currentMotorcycleDeptFilter !== 'all') {
   motorcycleStatusData = motorcycleStatusData.filter(data => data.motorcycle.motorcycleDepartment === currentMotorcycleDeptFilter);
 }
   if (document.getElementById('available-count')) document.getElementById('available-count').textContent = availableCount;
   if (document.getElementById('pending-count')) document.getElementById('pending-count').textContent = pendingCount;
   if (document.getElementById('in-use-count')) document.getElementById('in-use-count').textContent = inUseCount;
-  // Apply current filter
   let filteredData = currentStatusFilter === 'all' ?
     motorcycleStatusData :
     motorcycleStatusData.filter(data => data.status === currentStatusFilter);
@@ -1206,7 +1169,6 @@ function renderMotorcycleStatus(motorcycles, requests) {
       data.motorcycle.motorcycleDepartment.toLowerCase().includes(currentMotorcycleSearchTerm.toLowerCase())
     );
   }
-  // Update filtered count
   document.getElementById('filtered-count').textContent = filteredData.length;
   if (filteredData.length === 0) {
     const filterNames = {
@@ -1243,6 +1205,16 @@ function renderMotorcycleStatus(motorcycles, requests) {
     </div>
   `).join('');
 }
+function formatUsageTime(usageTime) {
+  if (!usageTime) return null;
+  if (usageTime.includes('T')) {
+    const date = new Date(usageTime);
+    const hours = date.getHours().toString().padStart(2, '0');
+    const minutes = date.getMinutes().toString().padStart(2, '0');
+    return `${hours}:${minutes}`;
+  }
+  return usageTime; 
+}
 function filterMotorcycleStatus(filter) {
   currentStatusFilter = filter;
   document.querySelectorAll('[id^="filter-"]').forEach(btn => btn.classList.remove('active-filter'));
@@ -1269,7 +1241,7 @@ function filterHistory(completedRequests) {
   }
   if (fromDateStr || toDateStr) {
     filtered = filtered.filter(r => {
-      const reqDate = r.requestDate.replace(/\//g, '-'); // تبدیل به YYYY-MM-DD
+      const reqDate = r.requestDate.replace(/\//g, '-'); 
       if (fromDateStr && reqDate < fromDateStr) return false;
       if (toDateStr && reqDate > toDateStr) return false;
       return true;
@@ -1284,20 +1256,16 @@ function filterHistory(completedRequests) {
 function populateDepartmentDropdown() {
   const optionsContainer = document.getElementById('department-options');
   if (!optionsContainer) return;
-
   if (availableDepartments.length === 0) {
     optionsContainer.innerHTML = '<div class="p-3 text-gray-500 text-center">هیچ دیپارتمنتی ثبت نشده است. ابتدا موتور سکیل اضافه کنید.</div>';
     return;
   }
-
-  // تغییر: نمایش فقط departmentهای مجاز بر اساس کاربر (availableDepartments قبلاً فیلتر شده)
   optionsContainer.innerHTML = availableDepartments.map(dept =>
     `<div class="p-3 hover:bg-gray-100 cursor-pointer border-b border-gray-100 last:border-b-0" onclick="selectDepartment('${dept}')">${dept}</div>`
   ).join('');
 }
 function searchDepartments() {
   const searchTerm = document.getElementById('department-search').value.toLowerCase();
-  // تغییر: فیلتر روی availableDepartments (که قبلاً بر اساس کاربر محدود شده)
   const filteredDepartments = availableDepartments.filter(dept => dept.toLowerCase().includes(searchTerm));
   const optionsContainer = document.getElementById('department-options');
   if (!optionsContainer) return;
@@ -1336,7 +1304,6 @@ function filterByDepartment() {
   const motorcycleSelect = document.getElementById('motorcycle-select');
   const employeeDisplay = document.getElementById('employee-display');
   const motorcycleDisplay = document.getElementById('motorcycle-display');
-
   if (!selectedDepartment) {
     employeeSelect.disabled = true;
     motorcycleSelect.disabled = true;
@@ -1346,28 +1313,21 @@ function filterByDepartment() {
     motorcycleDisplay.textContent = 'ابتدا دیپارتمنت را انتخاب کنید';
     return;
   }
-
   const activeRequests = allData.filter(d => d.type === 'request' && (d.status === 'pending' || d.status === 'active'));
   requestedEmployeeIds = activeRequests.map(r => r.employeeId);
-
-  // تغییر: منطق خاص برای "متفرقه" بر اساس department کاربر
   const userDept = window.currentUser.department || '';
   if (selectedDepartment === 'متفرقه') {
     if (userDept !== 'BDT' && userDept !== 'همه') {
-      // اگر department کاربر نه BDT و نه همه: همه کارمندان، اما فقط موتورهای department خودش
       availableEmployees = allData.filter(d => d.type === 'employee' && !requestedEmployeeIds.includes(d.employeeId));
       availableMotorcycles = allData.filter(d => d.type === 'motorcycle' && d.motorcycleDepartment === userDept);
     } else {
-      // اگر BDT یا همه: همه کارمندان و همه موتورها
       availableEmployees = allData.filter(d => d.type === 'employee' && !requestedEmployeeIds.includes(d.employeeId));
       availableMotorcycles = allData.filter(d => d.type === 'motorcycle');
     }
   } else {
-    // منطق قبلی برای departmentهای غیر متفرقه
     availableEmployees = allData.filter(d => d.type === 'employee' && d.department === selectedDepartment && !requestedEmployeeIds.includes(d.employeeId));
     availableMotorcycles = allData.filter(d => d.type === 'motorcycle' && d.motorcycleDepartment === selectedDepartment);
   }
-
   employeeDisplay.textContent = availableEmployees.length > 0 ? 'کارمند را انتخاب کنید' : 'هیچ کارمندی در این دیپارتمنت یافت نشد';
   motorcycleDisplay.textContent = availableMotorcycles.length > 0 ? 'موتور سکیل را انتخاب کنید' : 'هیچ موتور سکیلی در این دیپارتمنت یافت نشد';
   employeeSelect.disabled = false;
@@ -1384,18 +1344,15 @@ let availableEmployees = [];
 let availableMotorcycles = [];
 function updateModalSelects(employees, motorcycles) {
   const uniqueDepts = [...new Set([...employees.map(e => e.department), ...motorcycles.map(m => m.motorcycleDepartment)])].sort();
-
-  // تغییر: فیلتر departmentها بر اساس department کاربر
-  const userDept = window.currentUser.department || ''; // department کاربر فعلی
+  const userDept = window.currentUser.department || ''; 
   if (userDept === 'BDT' || userDept === 'همه') {
     availableDepartments = ['متفرقه', ...uniqueDepts];
   } else {
-    availableDepartments = ['متفرقه']; // همیشه "متفرقه" را نشان بده
+    availableDepartments = ['متفرقه']; 
     if (uniqueDepts.includes(userDept)) {
-      availableDepartments.push(userDept); // فقط department خودش را اضافه کن
+      availableDepartments.push(userDept); 
     }
   }
-
   populateDepartmentDropdown();
 }
 function populateEmployeeDropdown() {
@@ -1653,6 +1610,7 @@ async function submitNewRequest(event) {
     requesterFullName: requesterFullName,
     exitTime: '',
     entryTime: '',
+    usageTime: '',
     status: 'pending'
   };
   const result = await window.dataSdk.create(requestData);
@@ -1824,7 +1782,7 @@ async function markAsExit(requestId) {
   const request = allData.find(d => d.__backendId === requestId);
   if (!request) return;
   const now = new Date();
-  const exitTime = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+  const exitTime = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false }); 
   const updatedRequest = {
     ...request,
     exitTime: exitTime,
@@ -1842,10 +1800,12 @@ async function markAsEntry(requestId) {
   const request = allData.find(d => d.__backendId === requestId);
   if (!request) return;
   const now = new Date();
-  const entryTime = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+  const entryTime = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
+  const usageTime = calculateUsageTime(request.exitTime, entryTime);  
   const updatedRequest = {
     ...request,
     entryTime: entryTime,
+    usageTime: usageTime,  
     status: 'completed'
   };
   const result = await window.dataSdk.update(updatedRequest);
@@ -1899,16 +1859,18 @@ async function deleteRequest(requestId) {
     return { isOk: false };
   }
   const now = new Date();
-  const currentTime = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
-  let updatedExitTime = request.exitTime || currentTime; 
-  let updatedEntryTime = currentTime; 
-  const updatedRequest = {
-    ...request,
-    status: 'delet', 
-    deleterFullName: window.currentUser.fullName || 'ناشناس', 
-    exitTime: updatedExitTime,
-    entryTime: updatedEntryTime
-  };
+  const currentTime = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });  
+  let updatedExitTime = request.exitTime || currentTime;
+  let updatedEntryTime = currentTime;
+const usageTime = calculateUsageTime(updatedExitTime, updatedEntryTime);
+const updatedRequest = {
+  ...request,
+  status: 'delet',
+  deleterFullName: window.currentUser.fullName || 'ناشناس',
+  exitTime: updatedExitTime,
+  entryTime: updatedEntryTime,
+  usageTime: usageTime  
+};
   const result = await window.dataSdk.update(updatedRequest);
   if (result.isOk) {
     showToast('درخواست با موفقیت حذف (به وضعیت delet تغییر یافت)', '✅');
@@ -1979,11 +1941,10 @@ function filterByDept(dept) {
   renderDeptFilters();
 }
 function filterMotorcycleByDept(dept) {
-  // اضافه: remove کلاس فعال از همه دکمه‌ها قبل از تغییر
   document.querySelectorAll('#dept-filters button').forEach(btn => btn.classList.remove('active-filter'));
-  
+ 
   currentMotorcycleDeptFilter = dept;
-  updateCurrentPage();  // این renderMotorcycleDeptFilters را فراخوانی می‌کند و کلاس جدید اعمال می‌شود
+  updateCurrentPage(); 
 }
 function searchRequests() {
   currentRequestSearch = document.getElementById('request-search').value.trim();
@@ -2001,7 +1962,6 @@ function renderDeptFilters() {
 function renderMotorcycleDeptFilters() {
   const container = document.getElementById('dept-filters');
   if (!container) return;
-  // چک برای departments خالی (اختیاری اما مفید)
   if (departments.length === 0) {
     container.innerHTML = '<p class="text-gray-300 text-sm whitespace-nowrap">هیچ دیپارتمنتی موجود نیست</p>';
     return;
