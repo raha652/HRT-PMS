@@ -492,3 +492,8 @@ transform: scale-105;
 .smoke1 { animation: smoke 1.4s infinite ease-out 0s; }
 .smoke2 { animation: smoke 1.6s infinite ease-out 0.4s; font-size: 28px; }
 .smoke3 { animation: smoke 1.8s infinite ease-out 0.8s; font-size: 36px; }
+
+.small-img {
+  width: 120px;
+  height: auto;
+}
