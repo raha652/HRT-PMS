@@ -99,7 +99,6 @@ async function syncMotorcyclesWithGoogleSheets(allDataRef) {
       const gsMotorcycles = result.data
         .map(mapGSToMotorcycle)
         .filter(moto => moto.__backendId);
- 
       const nonMotorcycleData = allDataRef.filter(d => d.type !== 'motorcycle');
       allDataRef.length = 0;
       allDataRef.push(...nonMotorcycleData, ...gsMotorcycles);
@@ -112,7 +111,6 @@ async function syncMotorcyclesWithGoogleSheets(allDataRef) {
     return false;
   }
 }
-
 function mapRequestToGS(item) {
   return {
     'Unique ID': item.__backendId,
@@ -129,10 +127,10 @@ function mapRequestToGS(item) {
     'زمان خروج': item.exitTime || '',
     'زمان ورود': item.entryTime || '',
     'وضعیت': item.status,
-    'نام حذف کننده': item.deleterFullName || ''  // فیلد جدید برای نام حذف‌کننده
+    'نام حذف کننده': item.deleterFullName || '',
+    'زمان استفاده': item.usageTime || ''  
   };
 }
-
 function mapGSToRequest(record) {
   function formatDateToString(value) {
     if (typeof value === 'string') {
@@ -160,13 +158,13 @@ function mapGSToRequest(record) {
       if (value.includes('T')) {
         const date = new Date(value);
         if (!isNaN(date.getTime())) {
-          return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+          return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });  
         }
       } else {
         return value;
       }
     } else if (value instanceof Date) {
-      return value.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+      return value.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });  
     }
     return value || '';
   }
@@ -186,7 +184,8 @@ return {
   exitTime: formatTimeToString(record['زمان خروج']) || '',
   entryTime: formatTimeToString(record['زمان ورود']) || '',
   status: record['وضعیت'],
-  deleterFullName: record['نام حذف کننده'] || ''  // فیلد جدید برای نام حذف‌کننده
+  deleterFullName: record['نام حذف کننده'] || '',
+  usageTime: record['زمان استفاده'] || ''  
 };
 }
 async function syncRequestsWithGoogleSheets(allDataRef) {
@@ -196,8 +195,7 @@ async function syncRequestsWithGoogleSheets(allDataRef) {
       let gsRequests = result.data
         .map(mapGSToRequest)
         .filter(req => req.__backendId);
-      // مطمئن شویم درخواست‌های با وضعیت 'delet' نیز sync شوند اما در UI نشان داده نشوند
-      gsRequests = gsRequests.filter(req => req.status !== 'delet' || true); 
+      gsRequests = gsRequests.filter(req => req.status !== 'delet' || true);
       const nonRequestData = allDataRef.filter(d => d.type !== 'request');
       const motorcycles = nonRequestData.filter(d => d.type === 'motorcycle');
       for (let req of gsRequests) {
@@ -211,7 +209,6 @@ async function syncRequestsWithGoogleSheets(allDataRef) {
           req.motorcycleId = matchingMotor.__backendId;
         } else {
           console.warn('No matching motorcycle found for request:', req);
-          // Optionally filter out invalid requests: gsRequests = gsRequests.filter(r => r !== req);
         }
       }
       allDataRef.length = 0;
@@ -225,7 +222,6 @@ async function syncRequestsWithGoogleSheets(allDataRef) {
     return false;
   }
 }
-
 function mapUserToGS(item) {
   return {
     'Unique ID': item.__backendId,
@@ -234,7 +230,7 @@ function mapUserToGS(item) {
     'رمز عبور': item.password,
     'نقش': item.role,
     'موقعیت شغلی': item.position || 'نامشخص',
-    'دیپارتمنت': item.department || 'نامشخص' 
+    'دیپارتمنت': item.department || 'نامشخص'
   };
 }
 
