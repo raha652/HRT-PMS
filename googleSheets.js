@@ -245,3 +245,54 @@ function mapGSToUser(record) {
     department: record['دیپارتمنت'] || 'نامشخص' 
   };
 }
+
+
+function mapFuelToGS(item) {
+  return {
+    'Unique ID': item.__backendId,
+    'نام موتور': item.motorcycleName,
+    'رنگ': item.motorcycleColor || '',
+    'آیدی': item.motorcycleId || '',
+    'پلاک': item.motorcyclePlate || '',
+    'دیپارتمنت': item.motorcycleDepartment || '',
+    'نوع تیل': item.fuelType || '',
+    'تاریخ': item.reportDate || '',
+    'میزان تیل': item.fuelAmount || '',
+    'میزان کیلومتر': item.kilometerAmount || '',
+    'نام کارمند': item.reporterFullName || '',
+    'میزان طی مسیر': item.totalDistance || 0
+  };
+}
+
+function mapGSToFuel(record) {
+  return {
+    __backendId: record['Unique ID'],
+    motorcycleName: record['نام موتور'],
+    motorcycleColor: record['رنگ'] || '',
+    motorcycleId: record['آیدی'] || '',
+    motorcyclePlate: record['پلاک'] || '',
+    motorcycleDepartment: record['دیپارتمنت'] || '',
+    fuelType: record['نوع تیل'],
+    reportDate: record['تاریخ'],
+    fuelAmount: record['میزان تیل'],
+    kilometerAmount: record['میزان کیلومتر'],
+    reporterFullName: record['نام کارمند'] || '',
+    totalDistance: record['میزان طی مسیر'] || 0
+  };
+}
+
+async function syncFuelReports() {
+  try {
+    const result = await callGoogleSheets('readAll', 'fuel');
+    if (result.success) {
+      fuelReports = result.data
+        .map(mapGSToFuel)
+        .filter(r => r.__backendId);
+      return true;
+    }
+    return false;
+  } catch (error) {
+    console.error('Error syncing fuel reports:', error);
+    return false;
+  }
+}
