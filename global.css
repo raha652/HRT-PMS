@@ -183,6 +183,28 @@ body {
       overflow-y: auto;
       animation: slideUp 0.3s ease;
     }
+
+    .modal-content32 {
+      background: rgb(99, 65, 126);
+      border-radius: 20px;
+      padding: 32px;
+      max-width: 1000px;
+      width: 90%;
+      max-height: 90%;
+      overflow-y: auto;
+      animation: slideUp 0.3s ease;
+    }
+
+        .modal-content33 {
+      background: rgb(99, 65, 126);
+      border-radius: 20px;
+      padding: 32px;
+      max-width: 11000px;
+      width: 90%;
+      max-height: 90%;
+      overflow-y: auto;
+      animation: slideUp 0.3s ease;
+    }
   
     @keyframes slideUp {
       from {
