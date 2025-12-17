@@ -2255,6 +2255,16 @@ function renderFuelReportsList() {
   }
 }
 
+function searchUsage() {
+  const searchInput = document.getElementById('usage-search');
+  if (searchInput) {
+    // مقدار را به متغیر سراسری منتقل می‌کنیم
+    usageSearchTerm = searchInput.value.trim().toLowerCase();
+    // بلافاصله لیست را دوباره رندر می‌کنیم (بدون انتظار برای سینک ۵ ثانیه‌ای)
+    renderUsageMotorcycles();
+  }
+}
+
 function filterFuelReportsByDate() {
   fuelReportSearchDate = document.getElementById('fuel-report-date-search').value;
   renderFuelReportsList();
