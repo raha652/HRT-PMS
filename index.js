@@ -1,3 +1,12 @@
+const defaultConfig = {
+  dashboard_title: 'سیستم مدیریت موتور سکیل ها',
+  company_name: 'پارکینگ مرکزی',
+  primary_color: '#667eea',
+  secondary_color: '#11998e',
+  text_color: '#1f2937',
+  background_color: '#f9fafb',
+  card_color: '#ffffff'
+};
 let allData = [];
 let allUsers = [];
 let currentRecordCount = 0;
@@ -2329,4 +2338,5 @@ function renderMotorcycleDeptFilters() {
   });
   container.innerHTML = html;
 }
+
 
