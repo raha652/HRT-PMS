@@ -70,7 +70,9 @@ function mapMotorcycleToGS(item) {
     'وضعیت جی پی اس': item.motorcycleGpsStatus || '',
     'دیپارتمنت': item.motorcycleDepartment,
     'URL عکس': item.motorcyclePhoto || '',
-    'URL اسناد': item.motorcycleDocuments || ''
+    'URL اسناد': item.motorcycleDocuments || '',
+    'مجموعه استفاده': item.totalUsageTime || '00:00'
+
   };
 }
 function mapGSToMotorcycle(record) {
@@ -89,7 +91,9 @@ function mapGSToMotorcycle(record) {
     motorcycleGpsStatus: record['وضعیت جی پی اس'] || '',
     motorcycleDepartment: record['دیپارتمنت'],
     motorcyclePhoto: record['URL عکس'] || '',
-    motorcycleDocuments: record['URL اسناد'] || ''
+    motorcycleDocuments: record['URL اسناد'] || '',
+    totalUsageTime: record['مجموعه استفاده'] || '00:00'
+
   };
 }
 async function syncMotorcyclesWithGoogleSheets(allDataRef) {
@@ -128,7 +132,7 @@ function mapRequestToGS(item) {
     'زمان ورود': item.entryTime || '',
     'وضعیت': item.status,
     'نام حذف کننده': item.deleterFullName || '',
-    'زمان استفاده': item.usageTime || ''  
+    'زمان استفاده': item.usageTime || ''
   };
 }
 function mapGSToRequest(record) {
