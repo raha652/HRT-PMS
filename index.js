@@ -891,7 +891,7 @@ async function initApp() {
     });
   }
   setupIdleLogout();
-  setInterval(syncAllData, 5000);
+  setInterval(syncAllData, 7000);
 }
 function setupIdleLogout() {
   if (typeof window.idleTime === 'undefined') {
@@ -1880,26 +1880,81 @@ async function markAsExit(requestId) {
     showToast('خطا در ثبت خروج', '❌');
   }
 }
+
 async function markAsEntry(requestId) {
   const request = allData.find(d => d.__backendId === requestId);
   if (!request) return;
+
   const now = new Date();
-  const entryTime = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
+  const entryTime = now.toLocaleTimeString('en-US', {
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false
+  });
+
   const usageTime = calculateUsageTime(request.exitTime, entryTime);
+
   const updatedRequest = {
     ...request,
     entryTime: entryTime,
     usageTime: usageTime,
     status: 'completed'
   };
+
   const result = await window.dataSdk.update(updatedRequest);
+
   if (result.isOk) {
+
+    // 🔥 دقیقا همین‌جا اضافه می‌شود
+    await updateMotorcycleUsageAfterCompletion(updatedRequest);
+
     showToast('ورود با موفقیت ثبت شد', '✅');
     updateCurrentPage();
+
   } else {
     showToast('خطا در ثبت ورود', '❌');
   }
 }
+
+
+
+async function updateMotorcycleUsageAfterCompletion(request) {
+  if (request.status !== 'completed') return;
+
+  const index = allData.findIndex(d =>
+    d.type === 'motorcycle' &&
+    d.motorcycleName === request.motorcycleName &&
+    d.motorcycleColor === request.motorcycleColor &&
+    d.motorcyclePlate === request.motorcyclePlate &&
+    d.motorcycleDepartment === request.motorcycleDepartment
+  );
+
+  if (index === -1) {
+    console.warn('Motorcycle not found');
+    return;
+  }
+
+  const motorcycle = allData[index];
+
+  const previousTotal = normalizeTime(motorcycle.totalUsageTime);
+  const newUsage = normalizeTime(request.usageTime);
+  const updatedTotal = addTimes(previousTotal, newUsage);
+
+  console.log('Prev:', previousTotal, 'New:', newUsage, 'Final:', updatedTotal);
+
+  // ✅ 1. آپدیت در حافظه
+  allData[index] = {
+    ...motorcycle,
+    totalUsageTime: updatedTotal
+  };
+
+  // ✅ 2. ذخیره در Google Sheets
+  await window.dataSdk.update(allData[index]);
+}
+
+
+
+
 async function deleteMotorcycle(motorcycleId) {
   const motorcycle = allData.find(d => d.__backendId === motorcycleId);
   if (!motorcycle) return;
@@ -2340,3 +2395,72 @@ function renderMotorcycleDeptFilters() {
 }
 
 
+function normalizeTime(time) {
+  if (!time || typeof time !== 'string') return '00:00';
+
+  const parts = time.split(':');
+  if (parts.length !== 2) return '00:00';
+
+  const h = parseInt(parts[0], 10);
+  const m = parseInt(parts[1], 10);
+
+  if (isNaN(h) || isNaN(m)) return '00:00';
+
+  return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
+}
+
+function addTimes(time1, time2) {
+  time1 = normalizeTime(time1);
+  time2 = normalizeTime(time2);
+
+  const [h1, m1] = time1.split(':').map(Number);
+  const [h2, m2] = time2.split(':').map(Number);
+
+  const totalMinutes = (h1 * 60 + m1) + (h2 * 60 + m2);
+
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+
+  return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+}
+
+
+function timeToMinutes(time) {
+  const normalized = normalizeTime(time);
+  const [hours, minutes] = normalized.split(':').map(Number);
+  return (hours * 60) + minutes;
+}
+
+async function syncMotorcyclesWithGoogleSheets(allDataRef) {
+  try {
+    const result = await callGoogleSheets('readAll', 'motors');
+    if (result.success) {
+      const gsMotorcycles = result.data
+        .map(mapGSToMotorcycle)
+        .filter(moto => moto.__backendId);
+      const nonMotorcycleData = allDataRef.filter(d => d.type !== 'motorcycle');
+      const localMotorcycles = allDataRef.filter(d => d.type === 'motorcycle');
+      const motorsMap = new Map(localMotorcycles.map(m => [m.__backendId, m]));
+      gsMotorcycles.forEach(gsMoto => {
+        if (motorsMap.has(gsMoto.__backendId)) {
+          const local = motorsMap.get(gsMoto.__backendId);
+          const localMin = timeToMinutes(local.totalUsageTime);
+          const gsMin = timeToMinutes(gsMoto.totalUsageTime);
+          const maxTotal = localMin > gsMin ? local.totalUsageTime : gsMoto.totalUsageTime;
+          const merged = { ...local, ...gsMoto, totalUsageTime: maxTotal };
+          motorsMap.set(gsMoto.__backendId, merged);
+        } else {
+          motorsMap.set(gsMoto.__backendId, gsMoto);
+        }
+      });
+      allDataRef.length = 0;
+      allDataRef.push(...nonMotorcycleData, ...Array.from(motorsMap.values()));
+      await saveData(allDataRef);
+      return true;
+    }
+    return false;
+  } catch (error) {
+    console.error('Error syncing motorcycles:', error);
+    return false;
+  }
+}
