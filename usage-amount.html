@@ -21,6 +21,7 @@
     در حال بارگذاری...
   </p>
 </div>
+
   <div class="h-screen p-6">
     <div class="card p-6 mb-6" id="header-section">
       <div class="flex items-center justify-between">
@@ -39,29 +40,99 @@
         </div>
       </div>
     </div>
-    <div class="card p-6 mb-6">
-      <div class="flex items-center justify-between mb-6">
-        <button class="btn btn-secondary" onclick="navigateTo('./fuel-consumption.html')"> ← بازگشت </button>
-                <div class="relative w-full p-3">
-                  <input type="text" id="usage-search" class="input-field pl-10 text-gray-800" placeholder="جستجو بر اساس نام موتور سکیل، دیپارتمنت و ..." oninput="searchUsage()">
-                  <span class="absolute left-6 top-1/2 transform -translate-y-1/2 text-gray-400">🔍</span>
-               </div>
-      </div>
-      </div>
-      <div class="card p-6 mb-6">               
-      <div id="usage-list" class="grid grid-cols-1 sm:grid-cols-2 gap-4 overflow-y-auto max-h-900 p-3 mb-4">
+    <div class="dropdown p-6 mb-6">
+      <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-4">
+        <button class="btn btn-secondary whitespace-nowrap" onclick="navigateTo('./fuel-consumption.html')">
+          ← بازگشت
+        </button>
+        <div class="relative flex-1 max-w-full mx-auto lg:mx-0">
+          <input type="text" id="usage-search" class="input-field pl-10 w-full text-gray-800" 
+                 placeholder="جستجو بر اساس نام موتور سکیل، دیپارتمنت و ..." 
+                 oninput="searchUsage()">
+          <span class="absolute left-6 top-1/2 transform -translate-y-1/2 text-gray-400">🔍</span>
+        </div>
+        <div class="flex gap-3 justify-center lg:justify-end">
+          <div class="relative"> 
+            <button id="sort-button" class="btn btn-dept text-sm whitespace-nowrap" onclick="toggleSortDropdown()">
+              مرتب بر اساس:
+            </button>
+            <div id="sort-dropdown" class="hidden absolute right-0 mt-2 w-35 bg-gray-800 border border-gray-600 rounded-lg shadow-lg z-1000">
+              <div class="p-3 hover:bg-gray-700 cursor-pointer border-b border-gray-600" onclick="setUsageSort('desc')">بیشترین استفاده</div>
+              <div class="p-3 hover:bg-gray-700 cursor-pointer" onclick="setUsageSort('asc')">کمترین استفاده</div>
+            </div>
+          </div>
+          <div class="relative">
+            <button id="dept-button" class="btn btn-dept text-sm whitespace-nowrap" onclick="toggleDeptDropdown()">
+              دیپارتمنت:
+            </button>
+            <div id="dept-dropdown" class="hidden absolute bg-gray-800 border border-gray-600 rounded-lg shadow-lg z-10 mt-2 w-40 max-h-60 overflow-y-auto">
+              <div id="dept-options"></div>
+            </div>
+          </div>
+          <div class="relative">
+            <button id="interval-button" class="btn btn-dept text-sm whitespace-nowrap" onclick="toggleIntervalDropdown()">
+              انتروال زمانی:
+            </button>
+            <div id="interval-dropdown" class="hidden absolute bg-gray-800 border border-gray-600 rounded-lg shadow-lg z-10 mt-2 w-35">
+              <div class="p-3 hover:bg-gray-700 cursor-pointer border-b border-gray-600" onclick="setTimeInterval('day')">روز</div>
+              <div class="p-3 hover:bg-gray-700 cursor-pointer border-b border-gray-600" onclick="setTimeInterval('week')">هفته</div>
+              <div class="p-3 hover:bg-gray-700 cursor-pointer border-b border-gray-600" onclick="setTimeInterval('month')">ماه</div>
+              <div class="p-3 hover:bg-gray-700 cursor-pointer border-b border-gray-600" onclick="setTimeInterval('year')">سال</div>
+              <div class="p-3 hover:bg-gray-700 cursor-pointer" onclick="setTimeInterval('custom')">سفارشی</div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
-<div id="usage-history-modal" class="modal">
-  <div class="modal-content33">
-    <div class="flex justify-between items-center mb-4">
-      <h2 id="modal-title" class="text-2xl font-bold text-gray-300 mb-6" >تاریخچه استفاده موتورسیکلت</h2>
-      <button class="btn btn-secondary" onclick="closeModal('usage-history-modal')">بستن</button>
+    <div></div>
+    <div class="card p-6 mb-6">               
+      <div id="usage-list" class="grid grid-cols-1 sm:grid-cols-2 gap-4 overflow-y-auto max-h-5000 p-3 mb-4">
+      </div>
     </div>
-    <div id="usage-history-list" class="grid grid-cols-1 sm:grid-cols-3 gap-4 overflow-y-auto max-h-140 p-4">
+    <div id="usage-history-modal" class="modal">
+      <div class="modal-content33">
+        <div class="flex justify-between items-center mb-4">
+          <h2 id="modal-title" class="text-2xl font-bold text-gray-300 mb-6">تاریخچه استفاده موتورسیکلت</h2>
+          <button class="btn btn-secondary" onclick="closeModal('usage-history-modal')">بستن</button>
+        </div>
+        <div id="usage-history-list" class="grid grid-cols-1 sm:grid-cols-3 gap-4 overflow-y-auto max-h-140 p-4">
+        </div>
+      </div>
+    </div>
+    <div id="custom-days-modal" class="modal">
+  <div class="modal-content max-w-md mx-auto">
+    <div class="flex justify-between items-center mb-6">
+      <h2 class="text-2xl font-bold text-gray-300">انتخاب بازه زمانی سفارشی</h2>
+      <button class="btn btn-secondary text-lg" onclick="closeCustomDaysModal()">✕</button>
+    </div>
+    <div class="p-6 bg-gray-800/50 rounded-xl">
+      <label for="custom-days-input" class="block text-lg text-gray-200 mb-3">
+        تعداد روزهای گذشته را وارد کنید:
+      </label>
+      <input 
+        type="number" 
+        id="custom-days-input" 
+        min="1" 
+        max="365" 
+        placeholder="مثلاً ۳۰" 
+        class="input-field w-full text-lg text-center py-4 text-gray-800"
+        value="30"
+      />
+      <p class="text-sm text-gray-400 mt-3 text-center">
+        آمار استفاده در این تعداد روز اخیر نمایش داده خواهد شد
+      </p>
+    </div>
+    <div class="flex gap-4 mt-8 justify-center">
+      <button class="btn btn-secondary px-8" onclick="closeCustomDaysModal()">
+        لغو
+      </button>
+      <button class="btn btn-primary px-8" onclick="confirmCustomDays()">
+        تایید
+      </button>
     </div>
   </div>
 </div>
+  </div>
 
   <script src="./googleSheets.js"></script>
   <script src="./index.js"></script>
