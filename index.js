@@ -28,6 +28,13 @@ let requestedEmployeeIds = [];
 let currentFuelReports = [];
 let fuelReportSearchDate = '';
 let usageSearchTerm = '';
+let currentUsageSort = 'none';
+let currentSortDisplay = 'هیچکدام';
+let currentUsageDeptFilter = 'all';
+let currentDeptDisplay = 'همه';
+let currentTimeInterval = 'none';
+let currentCustomDays = 0;
+let currentIntervalDisplay = 'هیچکدام';
 
 async function syncAllData() {
   try {
@@ -499,11 +506,11 @@ async function loadAndSyncDataForPage(page) {
       case 'motorcycles':
         await syncMotorcyclesWithGoogleSheets(allData);
         break;
-        case 'usage-amount':
-      await syncMotorcyclesWithGoogleSheets(allData);
-      await syncRequestsWithGoogleSheets(allData);
-      await loadFuelReports();  // اختیاری اگر نیاز به گزارش‌های دیگر باشد
-      break;
+      case 'usage-amount':
+        await syncMotorcyclesWithGoogleSheets(allData);
+        await syncRequestsWithGoogleSheets(allData);
+        await loadFuelReports(); 
+        break;
       case 'employees':
         await syncEmployeesWithGoogleSheets(allData);
         break;
@@ -512,11 +519,10 @@ async function loadAndSyncDataForPage(page) {
         await syncUsersWithGoogleSheets();
         break;
       case 'fuel-expenses':
-        // ابتدا داده‌های محلی را لود کنید و رندر کنید، سپس sync را در background انجام دهید
-        renderMotorcyclesForFuel(); // رندر اولیه با داده‌های محلی
+        renderMotorcyclesForFuel(); 
         syncMotorcyclesWithGoogleSheets(allData).then(() => {
           console.log('After background sync in fuel-expenses: allData length =', allData.length, 'motorcycles =', allData.filter(d => d.type === 'motorcycle').length);
-          renderMotorcyclesForFuel(); // رندر دوباره پس از sync
+          renderMotorcyclesForFuel(); 
         });
         await loadFuelReports();
         console.log('fuelReports length =', fuelReports.length);
@@ -561,7 +567,7 @@ function updateCurrentPage() {
       updateDashboard();
       break;
     case 'usage-amount':
-      renderUsageMotorcycles();  // تابع جدید برای رندر لیست
+      renderUsageMotorcycles(); 
       break;
   }
 }
@@ -632,25 +638,42 @@ function renderAccounts() {
   }
 }
 
-
 function renderUsageMotorcycles() {
   const container = document.getElementById('usage-list');
   if (!container) return;
   const motorcycles = allData.filter(d => d.type === 'motorcycle');
-  let filteredMotorcycles = motorcycles;
+  let filteredMotorcycles = motorcycles.map(moto => {
+    const filteredUsage = calculateFilteredUsage(moto.__backendId, currentTimeInterval, currentCustomDays);
+    return { ...moto, filteredUsage };
+  });
+
   if (usageSearchTerm) {
     const searchLower = usageSearchTerm.toLowerCase();
-    filteredMotorcycles = motorcycles.filter(moto =>
+    filteredMotorcycles = filteredMotorcycles.filter(moto =>
       moto.motorcycleName.toLowerCase().includes(searchLower) ||
       moto.motorcycleDepartment.toLowerCase().includes(searchLower) ||
       moto.motorcycleColor.toLowerCase().includes(searchLower) ||
       moto.motorcyclePlate.toLowerCase().includes(searchLower)
     );
   }
+
+  if (currentUsageDeptFilter !== 'all') {
+    filteredMotorcycles = filteredMotorcycles.filter(moto => moto.motorcycleDepartment === currentUsageDeptFilter);
+  }
+
+  if (currentUsageSort !== 'none') {
+    filteredMotorcycles.sort((a, b) => {
+      const minA = timeToMinutes(a.filteredUsage || '00:00');
+      const minB = timeToMinutes(b.filteredUsage || '00:00');
+      return currentUsageSort === 'desc' ? minB - minA : minA - minB;
+    });
+  }
+
   if (filteredMotorcycles.length === 0) {
     container.innerHTML = '<div class="text-center py-12 text-gray-300"><p class="text-lg">هیچ موتورسیکلی یافت نشد</p></div>';
     return;
   }
+
   container.innerHTML = filteredMotorcycles.map(moto => `
     <div class="card p-6 cursor-pointer hover:shadow-2xl transition-all duration-300" onclick="showUsageHistoryModal('${moto.__backendId}')">
       <div class="flex items-center justify-between">
@@ -661,6 +684,7 @@ function renderUsageMotorcycles() {
             <p class="text-gray-200 mt-1">رنگ: ${moto.motorcycleColor}</p>
             <p class="text-gray-200 mt-1">دیپارتمنت: ${moto.motorcycleDepartment}</p>
             <p class="text-gray-200 mt-1">پلاک: ${moto.motorcyclePlate}</p>
+            <p class="text-gray-200 mt-1">مجموعه استفاده: ${moto.filteredUsage || '00:00'}</p>
           </div>
         </div>
       </div>
@@ -869,15 +893,15 @@ async function initApp() {
       renderAccounts();
     });
     if (getCurrentPage() === 'usage-amount') {
-    const usageSearchInput = document.getElementById('usage-search');
-    if (usageSearchInput) {
-      usageSearchInput.addEventListener('input', () => {
-        usageSearchTerm = usageSearchInput.value.trim().toLowerCase();
-        renderUsageMotorcycles();
-      });
+      const usageSearchInput = document.getElementById('usage-search');
+      if (usageSearchInput) {
+        usageSearchInput.addEventListener('input', () => {
+          usageSearchTerm = usageSearchInput.value.trim().toLowerCase();
+          renderUsageMotorcycles();
+        });
+      }
     }
   }
-}
   const searchInput = document.getElementById('motorcycle-status-search');
   const searchBtn = document.getElementById('motorcycle-status-search-btn');
   if (searchBtn && searchInput) {
@@ -1648,8 +1672,18 @@ async function submitNewRequest(event) {
   const motorcycleId = document.getElementById('selected-motorcycle').value;
   const employee = allData.find(d => d.__backendId === employeeId);
   const motorcycle = allData.find(d => d.__backendId === motorcycleId);
-  await syncAllData();
-  const activeRequests = allData.filter(d => d.type === 'request' && d.motorcycleId === motorcycle.__backendId && (d.status === 'pending' || d.status === 'active'));
+
+  if (!employee || !motorcycle) {
+    showToast('کارمند یا موتورسیکلت یافت نشد', '❌');
+    form.classList.remove('loading');
+    return;
+  }
+  const activeRequests = allData.filter(d => 
+    d.type === 'request' && 
+    d.motorcycleId === motorcycle.__backendId && 
+    (d.status === 'pending' || d.status === 'active')
+  );
+
   if (activeRequests.length > 0) {
     showToast('این موتورسیکلت توسط کاربر دیگری درخواست شده است. لطفاً لیست را چک کنید.', '⚠️');
     form.classList.remove('loading');
@@ -1697,12 +1731,13 @@ async function submitNewRequest(event) {
     usageTime: '',
     status: 'pending'
   };
-  const result = await window.dataSdk.create(requestData);
+const result = await window.dataSdk.create(requestData);
   form.classList.remove('loading');
   if (result.isOk) {
     showToast('درخواست با موفقیت ثبت شد', '✅');
     closeModal('new-request-modal');
     resetRequestForm();
+    updateCurrentPage();
   } else {
     showToast('خطا در ثبت درخواست', '❌');
   }
@@ -1722,6 +1757,7 @@ function resetRequestForm() {
   document.getElementById('employee-dropdown')?.classList.add('hidden');
   document.getElementById('motorcycle-dropdown')?.classList.add('hidden');
 }
+
 async function submitNewMotorcycle(event) {
   event.preventDefault();
   if (currentRecordCount >= 100000000000) {
@@ -1749,7 +1785,8 @@ async function submitNewMotorcycle(event) {
     motorcycleGpsStatus: gpsStatus,
     motorcycleDepartment: document.getElementById('motorcycle-department').value,
     motorcyclePhoto: document.getElementById('motorcycle-photo').value || '',
-    motorcycleDocuments: documents
+    motorcycleDocuments: documents,
+    totalUsageTime: '00:00'
   };
   const result = await window.dataSdk.create(motorcycleData);
   form.classList.remove('loading');
@@ -1763,6 +1800,7 @@ async function submitNewMotorcycle(event) {
     showToast('خطا در افزودن موتور سکیل', '❌');
   }
 }
+
 async function submitEditMotorcycle(event) {
   event.preventDefault();
   const form = event.target;
@@ -1788,7 +1826,8 @@ async function submitEditMotorcycle(event) {
     motorcycleGpsStatus: gpsStatus,
     motorcycleDepartment: document.getElementById('edit-motorcycle-department').value,
     motorcyclePhoto: document.getElementById('edit-motorcycle-photo').value || '',
-    motorcycleDocuments: documents
+    motorcycleDocuments: documents,
+    totalUsageTime: motorcycle.totalUsageTime || '00:00'
   };
   const result = await window.dataSdk.update(updatedMotorcycle);
   if (result.isOk) {
@@ -1862,24 +1901,31 @@ async function submitEditEmployee(event) {
     showToast('خطا در ویرایش کارمند', '❌');
   }
 }
+
+
 async function markAsExit(requestId) {
   const request = allData.find(d => d.__backendId === requestId);
   if (!request) return;
+
   const now = new Date();
   const exitTime = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
+
   const updatedRequest = {
     ...request,
     exitTime: exitTime,
     status: 'active'
   };
+
   const result = await window.dataSdk.update(updatedRequest);
   if (result.isOk) {
     showToast('خروج با موفقیت ثبت شد', '✅');
-    updateCurrentPage();
+    updateCurrentPage(); 
   } else {
     showToast('خطا در ثبت خروج', '❌');
   }
 }
+
+
 
 async function markAsEntry(requestId) {
   const request = allData.find(d => d.__backendId === requestId);
@@ -1904,13 +1950,9 @@ async function markAsEntry(requestId) {
   const result = await window.dataSdk.update(updatedRequest);
 
   if (result.isOk) {
-
-    // 🔥 دقیقا همین‌جا اضافه می‌شود
     await updateMotorcycleUsageAfterCompletion(updatedRequest);
-
     showToast('ورود با موفقیت ثبت شد', '✅');
     updateCurrentPage();
-
   } else {
     showToast('خطا در ثبت ورود', '❌');
   }
@@ -1919,8 +1961,7 @@ async function markAsEntry(requestId) {
 
 
 async function updateMotorcycleUsageAfterCompletion(request) {
-  if (request.status !== 'completed') return;
-
+  if (request.status !== 'completed' && request.status !== 'delet') return;  
   const index = allData.findIndex(d =>
     d.type === 'motorcycle' &&
     d.motorcycleName === request.motorcycleName &&
@@ -1928,30 +1969,21 @@ async function updateMotorcycleUsageAfterCompletion(request) {
     d.motorcyclePlate === request.motorcyclePlate &&
     d.motorcycleDepartment === request.motorcycleDepartment
   );
-
   if (index === -1) {
     console.warn('Motorcycle not found');
     return;
   }
-
   const motorcycle = allData[index];
-
-  const previousTotal = normalizeTime(motorcycle.totalUsageTime);
+  const previousTotal = normalizeTime(motorcycle.totalUsageTime || '00:00');  
   const newUsage = normalizeTime(request.usageTime);
   const updatedTotal = addTimes(previousTotal, newUsage);
-
   console.log('Prev:', previousTotal, 'New:', newUsage, 'Final:', updatedTotal);
-
-  // ✅ 1. آپدیت در حافظه
   allData[index] = {
     ...motorcycle,
     totalUsageTime: updatedTotal
   };
-
-  // ✅ 2. ذخیره در Google Sheets
   await window.dataSdk.update(allData[index]);
 }
-
 
 
 
@@ -2012,6 +2044,7 @@ async function deleteRequest(requestId) {
   };
   const result = await window.dataSdk.update(updatedRequest);
   if (result.isOk) {
+    await updateMotorcycleUsageAfterCompletion(updatedRequest);
     showToast('درخواست با موفقیت حذف (به وضعیت delet تغییر یافت)', '✅');
     if (getCurrentPage() === 'requests') {
       renderRequests(allData.filter(d => d.type === 'request' && (d.status === 'pending' || d.status === 'active')));
@@ -2053,6 +2086,23 @@ document.addEventListener('click', function (event) {
   if (userDropdown && !userIcon.contains(event.target) && !userDropdown.contains(event.target)) {
     userDropdown.classList.add('hidden');
   }
+  const sortButton = document.getElementById('sort-button');
+  const sortDropdown = document.getElementById('sort-dropdown');
+  if (sortDropdown && !sortButton.contains(event.target) && !sortDropdown.contains(event.target)) {
+    sortDropdown.classList.add('hidden');
+  }
+  const deptButton = document.getElementById('dept-button');
+  const deptDropdown = document.getElementById('dept-dropdown');
+  if (deptDropdown && !deptButton.contains(event.target) && !deptDropdown.contains(event.target)) {
+    deptDropdown.classList.add('hidden');
+  }
+
+  const intervalButton = document.getElementById('interval-button');
+  const intervalDropdown = document.getElementById('interval-dropdown');
+  if (intervalDropdown && !intervalButton.contains(event.target) && !intervalDropdown.contains(event.target)) {
+    intervalDropdown.classList.add('hidden');
+  }
+
 });
 function toggleUserDropdown() {
   const icon = document.getElementById('user-profile-icon');
@@ -2146,7 +2196,7 @@ let selectedMotorcycleForFuel = null;
 function selectFuelMotorcycle(id, displayText) {
   document.getElementById('fuel-motorcycle-display').textContent = displayText;
   document.getElementById('selected-fuel-motorcycle').value = id;
- 
+
   selectedMotorcycleForFuel = allData.find(d => d.__backendId === id && d.type === 'motorcycle');
   document.getElementById('fuel-motorcycle-dropdown').classList.add('hidden');
 }
@@ -2169,7 +2219,6 @@ async function submitFuelReport(event) {
   const month = String(now.getMonth() + 1).padStart(2, '0');
   const day = String(now.getDate()).padStart(2, '0');
   const reportDate = `${year}/${month}/${day}`;
-  // فیلتر گزارش‌های قبلی برای این موتور، مرتب‌سازی بر اساس تاریخ
   const previousReports = fuelReports.filter(report =>
     report.motorcycleName === selectedMotorcycleForFuel.motorcycleName &&
     report.motorcycleDepartment === selectedMotorcycleForFuel.motorcycleDepartment
@@ -2193,7 +2242,6 @@ async function submitFuelReport(event) {
     const lastReport = previousReports[previousReports.length - 1];
     const distance = kilometerAmount - parseFloat(lastReport.kilometerAmount);
     if (!isNaN(distance) && distance > 0) {
-      // به‌روزرسانی گزارش قبلی
       const updatedLastReport = {
         ...lastReport,
         totalDistance: distance
@@ -2201,7 +2249,6 @@ async function submitFuelReport(event) {
       const gsUpdateData = mapFuelToGS(updatedLastReport);
       const updateResult = await callGoogleSheets('update', 'fuel', gsUpdateData);
       if (updateResult.success) {
-        // به‌روزرسانی محلی
         const index = fuelReports.findIndex(r => r.__backendId === lastReport.__backendId);
         if (index !== -1) {
           fuelReports[index].totalDistance = distance;
@@ -2217,7 +2264,6 @@ async function submitFuelReport(event) {
   if (result.success) {
     showToast('گزارش تیل با موفقیت ثبت شد', 'Success');
     closeModal('fuel-report-modal');
-    // به‌روزرسانی fuelReports محلی
     fuelReports.push(reportData);
     document.getElementById('fuel-report-form').reset();
     document.getElementById('fuel-motorcycle-display').textContent = 'موتور سکیل را انتخاب کنید';
@@ -2273,9 +2319,9 @@ function showMotorcycleFuelReports(motorcycleId) {
   );
   const title = document.getElementById('motorcycle-reports-title');
   if (title) title.textContent = `گزارش‌های تیل برای ${motorcycle.motorcycleName} (${motorcycle.motorcycleDepartment})`;
-  renderFuelReportsList(); 
+  renderFuelReportsList();
   document.getElementById('motorcycle-reports-modal').classList.add('active');
-  document.getElementById('fuel-report-date-search').value = ''; 
+  document.getElementById('fuel-report-date-search').value = '';
   fuelReportSearchDate = '';
 }
 function renderFuelReportsList() {
@@ -2322,9 +2368,7 @@ function renderFuelReportsList() {
 function searchUsage() {
   const searchInput = document.getElementById('usage-search');
   if (searchInput) {
-    // مقدار را به متغیر سراسری منتقل می‌کنیم
     usageSearchTerm = searchInput.value.trim().toLowerCase();
-    // بلافاصله لیست را دوباره رندر می‌کنیم (بدون انتظار برای سینک ۵ ثانیه‌ای)
     renderUsageMotorcycles();
   }
 }
@@ -2335,17 +2379,17 @@ function filterFuelReportsByDate() {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
- if (getCurrentPage() === 'fuel-expenses') {
-  loadFuelReports().then(() => renderMotorcyclesForFuel());
-  const searchInput = document.getElementById('fuel-search');
-  if (searchInput) {
-    searchInput.addEventListener('input', () => {
-      fuelSearchTerm = searchInput.value.trim().toLowerCase();
-      renderMotorcyclesForFuel();
-    });
+  if (getCurrentPage() === 'fuel-expenses') {
+    loadFuelReports().then(() => renderMotorcyclesForFuel());
+    const searchInput = document.getElementById('fuel-search');
+    if (searchInput) {
+      searchInput.addEventListener('input', () => {
+        fuelSearchTerm = searchInput.value.trim().toLowerCase();
+        renderMotorcyclesForFuel();
+      });
+    }
   }
-}
-renderMotorcyclesForFuel();
+  renderMotorcyclesForFuel();
 });
 document.addEventListener('DOMContentLoaded', initApp);
 function filterRequests(filter) {
@@ -2437,9 +2481,11 @@ async function syncMotorcyclesWithGoogleSheets(allDataRef) {
     if (result.success) {
       const gsMotorcycles = result.data
         .map(mapGSToMotorcycle)
-        .filter(moto => moto.__backendId);
+        .filter(moto => moto.__backendId)
+        .map(moto => ({ ...moto, totalUsageTime: normalizeTime(moto.totalUsageTime || '00:00') }));
       const nonMotorcycleData = allDataRef.filter(d => d.type !== 'motorcycle');
-      const localMotorcycles = allDataRef.filter(d => d.type === 'motorcycle');
+      const localMotorcycles = allDataRef.filter(d => d.type === 'motorcycle')
+        .map(moto => ({ ...moto, totalUsageTime: normalizeTime(moto.totalUsageTime || '00:00') }));  
       const motorsMap = new Map(localMotorcycles.map(m => [m.__backendId, m]));
       gsMotorcycles.forEach(gsMoto => {
         if (motorsMap.has(gsMoto.__backendId)) {
@@ -2462,5 +2508,147 @@ async function syncMotorcyclesWithGoogleSheets(allDataRef) {
   } catch (error) {
     console.error('Error syncing motorcycles:', error);
     return false;
+  }
+}
+
+function setUsageSort(sortType) {
+  currentUsageSort = sortType;
+  currentSortDisplay = sortType === 'desc' ? 'بیشترین استفاده' : (sortType === 'asc' ? 'کمترین استفاده' : 'هیچکدام');
+  const sortButton = document.getElementById('sort-button');
+  if (sortButton) {
+    sortButton.textContent = `مرتب بر اساس: ${currentSortDisplay} `;
+  }
+  document.getElementById('sort-dropdown').classList.add('hidden');
+  renderUsageMotorcycles();
+}
+
+function toggleSortDropdown() {
+  const dropdown = document.getElementById('sort-dropdown');
+  if (dropdown) {
+    dropdown.classList.toggle('hidden');
+  }
+}
+
+function selectDept(dept) {
+  currentUsageDeptFilter = dept;
+  currentDeptDisplay = dept === 'all' ? 'همه' : dept;
+  const deptButton = document.getElementById('dept-button');
+  if (deptButton) {
+    deptButton.textContent = `دیپارتمنت: ${currentDeptDisplay}`;
+  }
+  document.getElementById('dept-dropdown').classList.add('hidden');
+  renderUsageMotorcycles();
+}
+
+function toggleDeptDropdown() {
+  const dropdown = document.getElementById('dept-dropdown');
+  if (dropdown) {
+    dropdown.classList.toggle('hidden');
+    if (!dropdown.classList.contains('hidden')) {
+      populateDeptDropdown();
+    }
+  }
+}
+
+function populateDeptDropdown() {
+  const optionsContainer = document.getElementById('dept-options');
+  if (!optionsContainer) return;
+  let html = `<div class="p-3 hover:bg-gray-700 cursor-pointer border-b border-gray-600" onclick="selectDept('all')">همه</div>`;
+  departments.forEach(dept => {
+    html += `<div class="p-3 hover:bg-gray-700 cursor-pointer border-b border-gray-600 last:border-b-0" onclick="selectDept('${dept}')">${dept}</div>`;
+  });
+  optionsContainer.innerHTML = html;
+}
+
+
+function calculateFilteredUsage(motorcycleId, interval, customDays = 0) {
+  const requests = allData.filter(d => d.type === 'request' && (d.status === 'completed' || d.status === 'delet') && d.motorcycleId === motorcycleId);
+  if (requests.length === 0) return '00:00';
+
+  const now = new Date();
+  let startDate = new Date();
+
+  if (interval === 'day') {
+    startDate.setHours(0, 0, 0, 0);
+  } else if (interval === 'week') {
+    startDate.setDate(startDate.getDate() - 7);
+  } else if (interval === 'month') {
+    startDate.setMonth(startDate.getMonth() - 1);
+  } else if (interval === 'year') {
+    startDate.setFullYear(startDate.getFullYear() - 1);
+  } else if (interval === 'custom' && customDays > 0) {
+    startDate.setDate(startDate.getDate() - customDays);
+  } else {
+    const motorcycle = allData.find(d => d.__backendId === motorcycleId && d.type === 'motorcycle');
+    return motorcycle ? (motorcycle.totalUsageTime || '00:00') : '00:00';
+  }
+  const filteredRequests = requests.filter(req => {
+    const reqDate = new Date(req.requestDate.replace(/\//g, '-'));
+    return reqDate >= startDate && reqDate <= now;
+  });
+  let total = '00:00';
+  filteredRequests.forEach(req => {
+    total = addTimes(total, req.usageTime || '00:00');
+  });
+  return total;
+}
+
+function setTimeInterval(interval) {
+  if (interval === 'custom') {
+    document.getElementById('custom-days-input').value = currentCustomDays || "";
+    document.getElementById('custom-days-modal').classList.add('active');
+    document.getElementById('custom-days-input').focus();
+    document.getElementById('interval-dropdown').classList.add('hidden');
+    return; 
+  } else {
+    currentTimeInterval = interval;
+    currentCustomDays = 1;
+    currentIntervalDisplay = 
+      interval === 'day' ? 'روز' :
+      interval === 'week' ? 'هفته' :
+      interval === 'month' ? 'ماه' :
+      interval === 'year' ? 'سال' :
+      'هیچکدام';
+
+    const intervalButton = document.getElementById('interval-button');
+    if (intervalButton) {
+      intervalButton.textContent = `انتروال زمانی: ${currentIntervalDisplay}`;
+    }
+    document.getElementById('interval-dropdown').classList.add('hidden');
+    renderUsageMotorcycles();
+  }
+}
+
+function closeCustomDaysModal() {
+  document.getElementById('custom-days-modal').classList.remove('active');
+}
+
+function confirmCustomDays() {
+  const input = document.getElementById('custom-days-input');
+  const days = parseInt(input.value);
+
+  if (isNaN(days) || days < 1 || days > 9999999999999999) {
+    showToast('لطفاً عددی بالاتر از 1 وارد کنید', '⚠️');
+    input.focus();
+    return;
+  }
+
+  currentCustomDays = days;
+  currentTimeInterval = 'custom';
+  currentIntervalDisplay = `سفارشی (${days} روز)`;
+
+  const intervalButton = document.getElementById('interval-button');
+  if (intervalButton) {
+    intervalButton.textContent = `انتروال زمانی: ${currentIntervalDisplay}`;
+  }
+
+  closeCustomDaysModal();
+  renderUsageMotorcycles();
+}
+
+function toggleIntervalDropdown() {
+  const dropdown = document.getElementById('interval-dropdown');
+  if (dropdown) {
+    dropdown.classList.toggle('hidden');
   }
 }
