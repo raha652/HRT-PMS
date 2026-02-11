@@ -162,35 +162,35 @@ function mapGSToRequest(record) {
       if (value.includes('T')) {
         const date = new Date(value);
         if (!isNaN(date.getTime())) {
-          return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });  
+          return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
         }
       } else {
         return value;
       }
     } else if (value instanceof Date) {
-      return value.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });  
+      return value.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
     }
     return value || '';
   }
-return {
-  type: 'request',
-  __backendId: record['Unique ID'],
-  employeeName: record['نام کارمند'],
-  employeeId: record['آیدی کارمند'],
-  department: record['دیپارتمنت کارمند'],
-  fingerprintId: record['شناسه اثر انگشت'],
-  motorcycleName: record['نام موتور سکیل'],
-  motorcycleColor: record['رنگ موتور سکیل'],
-  motorcyclePlate: record['پلاک موتور سکیل'],
-  motorcycleDepartment: record['دیپارتمنت موتور سکیل'],
-  requestDate: formatDateToString(record['تاریخ درخواست']),
-  requesterFullName: record['نام درخواست کننده'],
-  exitTime: formatTimeToString(record['زمان خروج']) || '',
-  entryTime: formatTimeToString(record['زمان ورود']) || '',
-  status: record['وضعیت'],
-  deleterFullName: record['نام حذف کننده'] || '',
-  usageTime: record['زمان استفاده'] || ''  
-};
+  return {
+    type: 'request',
+    __backendId: record['Unique ID'],
+    employeeName: record['نام کارمند'],
+    employeeId: record['آیدی کارمند'],
+    department: record['دیپارتمنت کارمند'],
+    fingerprintId: record['شناسه اثر انگشت'],
+    motorcycleName: record['نام موتور سکیل'],
+    motorcycleColor: record['رنگ موتور سکیل'],
+    motorcyclePlate: record['پلاک موتور سکیل'],
+    motorcycleDepartment: record['دیپارتمنت موتور سکیل'],
+    requestDate: formatDateToString(record['تاریخ درخواست']),
+    requesterFullName: record['نام درخواست کننده'],
+    exitTime: formatTimeToString(record['زمان خروج']) || '',
+    entryTime: formatTimeToString(record['زمان ورود']) || '',
+    status: record['وضعیت'],
+    deleterFullName: record['نام حذف کننده'] || '',
+    usageTime: record['زمان استفاده'] || ''
+  };
 }
 async function syncRequestsWithGoogleSheets(allDataRef) {
   try {
@@ -234,7 +234,10 @@ function mapUserToGS(item) {
     'رمز عبور': item.password,
     'نقش': item.role,
     'موقعیت شغلی': item.position || 'نامشخص',
-    'دیپارتمنت': item.department || 'نامشخص'
+    'دیپارتمنت': item.department || 'نامشخص',
+    'آدرس عکس': item.photo || '',
+    'وضعیت آنلاین': item.onlineStatus || 'offline',
+    'آخرین فعالیت': item.lastActivity || ''
   };
 }
 
@@ -246,7 +249,10 @@ function mapGSToUser(record) {
     password: record['رمز عبور'],
     role: record['نقش'],
     position: record['موقعیت شغلی'] || 'نامشخص',
-    department: record['دیپارتمنت'] || 'نامشخص' 
+    department: record['دیپارتمنت'] || 'نامشخص',
+    photo: record['آدرس عکس'] || '',
+    onlineStatus: record['وضعیت آنلاین'] || 'offline',
+    lastActivity: record['آخرین فعالیت'] || ''
   };
 }
 
