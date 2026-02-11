@@ -1,3 +1,10 @@
+// Application Constants
+const IDLE_TIMEOUT_SECONDS = 21600; 
+const SYNC_INTERVAL_MS = 7000; 
+const MAX_KILOMETERS = 1000000;
+const MIN_KILOMETERS = 0;
+const SEARCH_DEBOUNCE_MS = 300;
+
 const defaultConfig = {
   dashboard_title: 'سیستم مدیریت موتور سکیل ها',
   company_name: 'پارکینگ مرکزی',
@@ -138,7 +145,8 @@ async function loadUsers() {
         password: 'admin123',
         role: 'admin',
         position: 'Electrical ENG',
-        department: 'پاور'
+        department: 'پاور',
+        photo: 'https://i.ibb.co/bcmdRGx/photo-2025-11-07-17-46-35.jpg'
       };
       allUsers.push(defaultAdmin);
       await saveUsers();
@@ -282,7 +290,8 @@ async function syncUsersWithGoogleSheets() {
           password: 'admin123',
           role: 'admin',
           position: 'Electrical ENG',
-          department: 'پاور'
+          department: 'پاور',
+          photo: 'https://i.ibb.co/bcmdRGx/photo-2025-11-07-17-46-35.jpg'
         };
         gsUsers.push(defaultAdmin);
       }
@@ -425,7 +434,6 @@ function updateDepartments() {
   departments = uniqueDepartments.sort();
 }
 const passwords = {
-  request: '123',
   management: '456',
   motorcycle: 'motor123',
   employee: 'staff456'
@@ -509,7 +517,7 @@ async function loadAndSyncDataForPage(page) {
       case 'usage-amount':
         await syncMotorcyclesWithGoogleSheets(allData);
         await syncRequestsWithGoogleSheets(allData);
-        await loadFuelReports(); 
+        await loadFuelReports();
         break;
       case 'employees':
         await syncEmployeesWithGoogleSheets(allData);
@@ -519,10 +527,10 @@ async function loadAndSyncDataForPage(page) {
         await syncUsersWithGoogleSheets();
         break;
       case 'fuel-expenses':
-        renderMotorcyclesForFuel(); 
+        renderMotorcyclesForFuel();
         syncMotorcyclesWithGoogleSheets(allData).then(() => {
           console.log('After background sync in fuel-expenses: allData length =', allData.length, 'motorcycles =', allData.filter(d => d.type === 'motorcycle').length);
-          renderMotorcyclesForFuel(); 
+          renderMotorcyclesForFuel();
         });
         await loadFuelReports();
         console.log('fuelReports length =', fuelReports.length);
@@ -567,11 +575,38 @@ function updateCurrentPage() {
       updateDashboard();
       break;
     case 'usage-amount':
-      renderUsageMotorcycles(); 
+      renderUsageMotorcycles();
       break;
   }
 }
+async function setUserOnlineStatus(username, status) {
+  try {
+    const user = allUsers.find(u => u.username === username);
+    if (!user) return;
+
+    user.onlineStatus = status;
+    user.lastActivity = new Date().toISOString();
+
+    const userIndex = allUsers.findIndex(u => u.username === username);
+    if (userIndex !== -1) {
+      allUsers[userIndex] = user;
+      await saveUsers(allUsers);
+
+      // Sync with Google Sheets
+      const gsData = mapUserToGS(user);
+      await callGoogleSheets('update', 'accounts', gsData);
+    }
+  } catch (error) {
+    console.error('Error setting online status:', error);
+  }
+}
+
 function logout() {
+  // Set user as offline
+  if (window.currentUser && window.currentUser.username) {
+    setUserOnlineStatus(window.currentUser.username, 'offline');
+  }
+
   if (window.idleInterval) {
     clearInterval(window.idleInterval);
     window.idleInterval = null;
@@ -790,6 +825,9 @@ async function initApp() {
   currentUserRole = currentUser.role;
   session.fullName = currentUser.fullName;
   localStorage.setItem('session', JSON.stringify(session));
+
+  // Set user as online
+  await setUserOnlineStatus(currentUser.username, 'online');
   if (document.getElementById('current-user')) {
     document.getElementById('current-user').textContent = currentUser.fullName || "کاربر ناشناس";
   }
@@ -915,7 +953,7 @@ async function initApp() {
     });
   }
   setupIdleLogout();
-  setInterval(syncAllData, 7000);
+  setInterval(syncAllData, SYNC_INTERVAL_MS); // Use named constant
 }
 function setupIdleLogout() {
   if (typeof window.idleTime === 'undefined') {
@@ -936,7 +974,7 @@ function setupIdleLogout() {
   window.idleTime = 0;
   window.idleInterval = setInterval(() => {
     window.idleTime += 1;
-    if (window.idleTime >= 21600) {
+    if (window.idleTime >= IDLE_TIMEOUT_SECONDS) {
       showToast('به دلیل عدم فعالیت، شما لاگ‌اوت شدید', '⚠️');
       logout();
       clearInterval(window.idleInterval);
@@ -969,6 +1007,10 @@ function updateDashboard() {
   if (document.getElementById('total-employees')) document.getElementById('total-employees').textContent = employees.length;
   if (document.getElementById('active-requests')) document.getElementById('active-requests').textContent = activeRequests.length;
   if (document.getElementById('in-use')) document.getElementById('in-use').textContent = inUse.length;
+
+  // Update online status
+  updateOnlineStatus();
+
   if (getCurrentPage() === 'dashboard') {
     renderRequests(requests);
     renderMotorcycles(motorcycles);
@@ -1566,10 +1608,15 @@ function selectMotorcycle(motorcycleId, motorcycleText) {
   document.getElementById('motorcycle-dropdown').classList.add('hidden');
 }
 function openPasswordModal(type) {
+  // All users can create requests without password
+  if (type === 'request') {
+    openNewRequestModal();
+    return;
+  }
+
+  // For other types, admins can skip password
   if (currentUserRole === 'admin') {
-    if (type === 'request') {
-      openNewRequestModal();
-    } else if (type === 'management') {
+    if (type === 'management') {
       navigateTo('./management.html');
     } else if (type === 'motorcycle') {
       openNewMotorcycleModal();
@@ -1578,9 +1625,9 @@ function openPasswordModal(type) {
     }
     return;
   }
+
   currentPasswordType = type;
   const messages = {
-    request: '🔐 برای ایجاد درخواست جدید، رمز عبور را وارد کنید',
     management: '🔐 برای دسترسی به پنل مدیریت، رمز عبور را وارد کنید',
     motorcycle: '🔐 برای افزودن موتور سکیل، رمز عبور مدیریت موتور سکیل‌ها را وارد کنید',
     employee: '🔐 برای افزودن کارمند، رمز عبور مدیریت کارمندان را وارد کنید'
@@ -1596,9 +1643,8 @@ function verifyPassword(event) {
   if (enteredPassword === correctPassword) {
     closeModal('password-modal');
     document.getElementById('password-form').reset();
-    if (currentPasswordType === 'request') {
-      openNewRequestModal();
-    } else if (currentPasswordType === 'management') {
+
+    if (currentPasswordType === 'management') {
       navigateTo('./management.html');
     } else if (currentPasswordType === 'motorcycle') {
       openNewMotorcycleModal();
@@ -1617,6 +1663,10 @@ function openNewRequestModal() {
   updateModalSelects(employees, motorcycles);
   document.getElementById('new-request-modal').classList.add('active');
   populateDepartmentDropdown();
+}
+function closeNewRequestModal() {
+  closeModal('new-request-modal');
+  resetRequestForm();
 }
 function openNewMotorcycleModal() {
   toggleLicenseField();
@@ -1640,8 +1690,20 @@ function openEditMotorcycleModal(motorcycleId) {
   document.getElementById('edit-motorcycle-gps').value = motorcycle.motorcycleGps || '';
   document.getElementById('edit-motorcycle-gps-status').value = motorcycle.motorcycleGpsStatus || '';
   document.getElementById('edit-motorcycle-department').value = motorcycle.motorcycleDepartment;
-  document.getElementById('edit-motorcycle-photo').value = motorcycle.motorcyclePhoto || '';
-  document.getElementById('edit-motorcycle-documents').value = motorcycle.motorcycleDocuments || '';
+  // Don't set file input values - they can't be pre-filled programmatically
+  // If there are existing photos, show previews
+  if (motorcycle.motorcyclePhoto) {
+    document.getElementById('edit-motorcycle-photo-preview-img').src = motorcycle.motorcyclePhoto;
+    document.getElementById('edit-motorcycle-photo-preview').classList.remove('hidden');
+  } else {
+    document.getElementById('edit-motorcycle-photo-preview').classList.add('hidden');
+  }
+  if (motorcycle.motorcycleDocuments) {
+    document.getElementById('edit-motorcycle-documents-name').textContent = 'اسناد قبلی موجود است - فایل جدید برای جایگزینی انتخاب کنید';
+    document.getElementById('edit-motorcycle-documents-preview').classList.remove('hidden');
+  } else {
+    document.getElementById('edit-motorcycle-documents-preview').classList.add('hidden');
+  }
   document.getElementById('edit-motorcycle-form').dataset.id = motorcycleId;
   toggleEditLicenseField();
   toggleEditGpsStatusField();
@@ -1678,9 +1740,9 @@ async function submitNewRequest(event) {
     form.classList.remove('loading');
     return;
   }
-  const activeRequests = allData.filter(d => 
-    d.type === 'request' && 
-    d.motorcycleId === motorcycle.__backendId && 
+  const activeRequests = allData.filter(d =>
+    d.type === 'request' &&
+    d.motorcycleId === motorcycle.__backendId &&
     (d.status === 'pending' || d.status === 'active')
   );
 
@@ -1731,7 +1793,7 @@ async function submitNewRequest(event) {
     usageTime: '',
     status: 'pending'
   };
-const result = await window.dataSdk.create(requestData);
+  const result = await window.dataSdk.create(requestData);
   form.classList.remove('loading');
   if (result.isOk) {
     showToast('درخواست با موفقیت ثبت شد', '✅');
@@ -1758,6 +1820,69 @@ function resetRequestForm() {
   document.getElementById('motorcycle-dropdown')?.classList.add('hidden');
 }
 
+// Upload photo to imgbb (same function as in profile-settings.js)
+async function uploadPhotoToImgBB(file) {
+  const API_KEY = 'fdd337daacb1c2d5196f43b23400a246';
+
+  const formData = new FormData();
+  formData.append('image', file);
+
+  try {
+    const response = await fetch(`https://api.imgbb.com/1/upload?key=${API_KEY}`, {
+      method: 'POST',
+      body: formData
+    });
+    const result = await response.json();
+    if (result.success && result.data && result.data.url) {
+      return result.data.url;
+    }
+    throw new Error('آپلود عکس ناموفق بود');
+  } catch (error) {
+    console.error('Error uploading photo:', error);
+    throw error;
+  }
+}
+
+// Preview motorcycle photo
+function previewMotorcyclePhoto(input) {
+  if (input.files && input.files[0]) {
+    const reader = new FileReader();
+    reader.onload = function (e) {
+      document.getElementById('motorcycle-photo-preview-img').src = e.target.result;
+      document.getElementById('motorcycle-photo-preview').classList.remove('hidden');
+    };
+    reader.readAsDataURL(input.files[0]);
+  }
+}
+
+// Preview motorcycle documents
+function previewMotorcycleDocuments(input) {
+  if (input.files && input.files[0]) {
+    document.getElementById('motorcycle-documents-name').textContent = input.files[0].name;
+    document.getElementById('motorcycle-documents-preview').classList.remove('hidden');
+  }
+}
+
+// Preview edit motorcycle photo
+function previewEditMotorcyclePhoto(input) {
+  if (input.files && input.files[0]) {
+    const reader = new FileReader();
+    reader.onload = function (e) {
+      document.getElementById('edit-motorcycle-photo-preview-img').src = e.target.result;
+      document.getElementById('edit-motorcycle-photo-preview').classList.remove('hidden');
+    };
+    reader.readAsDataURL(input.files[0]);
+  }
+}
+
+// Preview edit motorcycle documents
+function previewEditMotorcycleDocuments(input) {
+  if (input.files && input.files[0]) {
+    document.getElementById('edit-motorcycle-documents-name').textContent = input.files[0].name;
+    document.getElementById('edit-motorcycle-documents-preview').classList.remove('hidden');
+  }
+}
+
 async function submitNewMotorcycle(event) {
   event.preventDefault();
   if (currentRecordCount >= 100000000000) {
@@ -1770,7 +1895,35 @@ async function submitNewMotorcycle(event) {
   const licenseNumber = documentType === 'جواز سیر' ? document.getElementById('motorcycle-license').value : '';
   const gps = document.getElementById('motorcycle-gps').value;
   const gpsStatus = gps === 'دارد' ? document.getElementById('motorcycle-gps-status').value : '';
-  const documents = document.getElementById('motorcycle-documents').value || '';
+
+  // Upload photos and documents
+  let photoUrl = '';
+  let documentsUrl = '';
+  const photoInput = document.getElementById('motorcycle-photo');
+  const documentsInput = document.getElementById('motorcycle-documents');
+
+  if (photoInput.files && photoInput.files[0]) {
+    try {
+      showToast('در حال آپلود عکس...', '⏳');
+      photoUrl = await uploadPhotoToImgBB(photoInput.files[0]);
+    } catch (error) {
+      showToast('خطا در آپلود عکس: ' + error.message, '❌');
+      form.classList.remove('loading');
+      return;
+    }
+  }
+
+  if (documentsInput.files && documentsInput.files[0]) {
+    try {
+      showToast('در حال آپلود اسناد...', '⏳');
+      documentsUrl = await uploadPhotoToImgBB(documentsInput.files[0]);
+    } catch (error) {
+      showToast('خطا در آپلود اسناد: ' + error.message, '❌');
+      form.classList.remove('loading');
+      return;
+    }
+  }
+
   const motorcycleData = {
     type: 'motorcycle',
     motorcycleName: document.getElementById('motorcycle-name').value,
@@ -1784,8 +1937,8 @@ async function submitNewMotorcycle(event) {
     motorcycleGps: gps,
     motorcycleGpsStatus: gpsStatus,
     motorcycleDepartment: document.getElementById('motorcycle-department').value,
-    motorcyclePhoto: document.getElementById('motorcycle-photo').value || '',
-    motorcycleDocuments: documents,
+    motorcyclePhoto: photoUrl,
+    motorcycleDocuments: documentsUrl,
     totalUsageTime: '00:00'
   };
   const result = await window.dataSdk.create(motorcycleData);
@@ -1796,6 +1949,9 @@ async function submitNewMotorcycle(event) {
     form.reset();
     toggleLicenseField();
     toggleGpsStatusField();
+    // Reset previews
+    document.getElementById('motorcycle-photo-preview').classList.add('hidden');
+    document.getElementById('motorcycle-documents-preview').classList.add('hidden');
   } else {
     showToast('خطا در افزودن موتور سکیل', '❌');
   }
@@ -1804,6 +1960,7 @@ async function submitNewMotorcycle(event) {
 async function submitEditMotorcycle(event) {
   event.preventDefault();
   const form = event.target;
+  form.classList.add('loading');
   const motorcycleId = form.dataset.id;
   const motorcycle = allData.find(d => d.__backendId === motorcycleId);
   if (!motorcycle) return;
@@ -1811,7 +1968,37 @@ async function submitEditMotorcycle(event) {
   const licenseNumber = documentType === 'جواز سیر' ? document.getElementById('edit-motorcycle-license').value : '';
   const gps = document.getElementById('edit-motorcycle-gps').value;
   const gpsStatus = gps === 'دارد' ? document.getElementById('edit-motorcycle-gps-status').value : '';
-  const documents = document.getElementById('edit-motorcycle-documents').value || motorcycle.motorcycleDocuments;
+
+  // Handle photo upload - keep existing photo unless a new file is selected
+  let photoUrl = motorcycle.motorcyclePhoto || '';
+  const photoInput = document.getElementById('edit-motorcycle-photo');
+
+  if (photoInput.files && photoInput.files[0]) {
+    try {
+      showToast('در حال آپلود عکس...', '⏳');
+      photoUrl = await uploadPhotoToImgBB(photoInput.files[0]);
+    } catch (error) {
+      showToast('خطا در آپلود عکس: ' + error.message, '❌');
+      form.classList.remove('loading');
+      return;
+    }
+  }
+
+  // Handle documents upload - keep existing documents unless a new file is selected
+  let documentsUrl = motorcycle.motorcycleDocuments || '';
+  const documentsInput = document.getElementById('edit-motorcycle-documents');
+
+  if (documentsInput.files && documentsInput.files[0]) {
+    try {
+      showToast('در حال آپلود اسناد...', '⏳');
+      documentsUrl = await uploadPhotoToImgBB(documentsInput.files[0]);
+    } catch (error) {
+      showToast('خطا در آپلود اسناد: ' + error.message, '❌');
+      form.classList.remove('loading');
+      return;
+    }
+  }
+
   const updatedMotorcycle = {
     ...motorcycle,
     motorcycleName: document.getElementById('edit-motorcycle-name').value,
@@ -1825,10 +2012,11 @@ async function submitEditMotorcycle(event) {
     motorcycleGps: gps,
     motorcycleGpsStatus: gpsStatus,
     motorcycleDepartment: document.getElementById('edit-motorcycle-department').value,
-    motorcyclePhoto: document.getElementById('edit-motorcycle-photo').value || '',
-    motorcycleDocuments: documents,
+    motorcyclePhoto: photoInput.files && photoInput.files[0] ? photoUrl : (motorcycle.motorcyclePhoto || ''),
+    motorcycleDocuments: documentsInput.files && documentsInput.files[0] ? documentsUrl : (motorcycle.motorcycleDocuments || ''),
     totalUsageTime: motorcycle.totalUsageTime || '00:00'
   };
+  form.classList.remove('loading');
   const result = await window.dataSdk.update(updatedMotorcycle);
   if (result.isOk) {
     showToast('موتور سکیل با موفقیت ویرایش شد', '✅');
@@ -1919,7 +2107,7 @@ async function markAsExit(requestId) {
   const result = await window.dataSdk.update(updatedRequest);
   if (result.isOk) {
     showToast('خروج با موفقیت ثبت شد', '✅');
-    updateCurrentPage(); 
+    updateCurrentPage();
   } else {
     showToast('خطا در ثبت خروج', '❌');
   }
@@ -1961,7 +2149,7 @@ async function markAsEntry(requestId) {
 
 
 async function updateMotorcycleUsageAfterCompletion(request) {
-  if (request.status !== 'completed' && request.status !== 'delet') return;  
+  if (request.status !== 'completed' && request.status !== 'delet') return;
   const index = allData.findIndex(d =>
     d.type === 'motorcycle' &&
     d.motorcycleName === request.motorcycleName &&
@@ -1974,7 +2162,7 @@ async function updateMotorcycleUsageAfterCompletion(request) {
     return;
   }
   const motorcycle = allData[index];
-  const previousTotal = normalizeTime(motorcycle.totalUsageTime || '00:00');  
+  const previousTotal = normalizeTime(motorcycle.totalUsageTime || '00:00');
   const newUsage = normalizeTime(request.usageTime);
   const updatedTotal = addTimes(previousTotal, newUsage);
   console.log('Prev:', previousTotal, 'New:', newUsage, 'Final:', updatedTotal);
@@ -2214,6 +2402,10 @@ async function submitFuelReport(event) {
     showToast('لطفاً همه فیلدها را پر کنید', 'Warning');
     return;
   }
+  if (kilometerAmount < MIN_KILOMETERS || kilometerAmount > MAX_KILOMETERS) {
+    showToast(`میزان کیلومتر باید بین ${MIN_KILOMETERS.toLocaleString()} تا ${MAX_KILOMETERS.toLocaleString()} باشد`, '⚠️');
+    return;
+  }
   const now = new Date();
   const year = now.getFullYear();
   const month = String(now.getMonth() + 1).padStart(2, '0');
@@ -2391,7 +2583,165 @@ document.addEventListener('DOMContentLoaded', () => {
   }
   renderMotorcyclesForFuel();
 });
-document.addEventListener('DOMContentLoaded', initApp);
+// Theme Toggle Function
+function toggleTheme() {
+  const body = document.body;
+  const themeIcon = document.getElementById('theme-icon');
+  const currentTheme = body.getAttribute('data-theme');
+
+  if (currentTheme === 'dark') {
+    body.removeAttribute('data-theme');
+    themeIcon.textContent = '☀️';
+    localStorage.setItem('theme', 'light');
+  } else {
+    body.setAttribute('data-theme', 'dark');
+    themeIcon.textContent = '🌙';
+    localStorage.setItem('theme', 'dark');
+  }
+}
+
+// Load saved theme on page load
+function loadTheme() {
+  const savedTheme = localStorage.getItem('theme') || 'light';
+  const body = document.body;
+  const themeIcon = document.getElementById('theme-icon');
+
+  // Apply theme to body regardless of whether theme icon exists
+  if (savedTheme === 'dark') {
+    body.setAttribute('data-theme', 'dark');
+    if (themeIcon) themeIcon.textContent = '🌙';
+  } else {
+    body.removeAttribute('data-theme');
+    if (themeIcon) themeIcon.textContent = '☀️';
+  }
+
+  // Force a reflow to ensure theme applies
+  void body.offsetHeight;
+}
+
+// Keyboard Shortcuts
+window.addEventListener('keydown', function (event) {
+  // Escape - Close all modals
+  if (event.key === 'Escape') {
+    document.querySelectorAll('.modal.active').forEach(modal => {
+      modal.classList.remove('active');
+    });
+  }
+
+  // Ctrl + K - Search focus
+  if (event.ctrlKey && (event.key === 'k' || event.key === 'K')) {
+    event.preventDefault();
+    const searchInput = document.querySelector('input[type="text"]:not([type="password"])') ||
+      document.querySelector('#department-search') ||
+      document.querySelector('#employee-search') ||
+      document.querySelector('#motorcycle-search');
+    if (searchInput) {
+      searchInput.focus();
+      showToast('فوکوس روی جستجو', '🔍');
+    }
+  }
+
+  // Ctrl + N - New request
+  if (event.ctrlKey && (event.key === 'n' || event.key === 'N')) {
+    event.preventDefault();
+    if (typeof openNewRequestModal === 'function') {
+      openPasswordModal('request');
+    } else {
+      showToast('صفحه درخواستی‌ها نیست', '⚠️');
+    }
+  }
+
+  // Ctrl + L - Logout
+  if (event.ctrlKey && (event.key === 'l' || event.key === 'L')) {
+    event.preventDefault();
+    if (confirm('آیا می‌خواهید خارج شوید؟')) {
+      logout();
+    }
+  }
+
+  // Ctrl + / - Show shortcuts help (Shift + / gives ? on keyboard)
+  if (event.ctrlKey && (event.key === '?' || event.key === '/')) {
+    event.preventDefault();
+    showShortcutsModal();
+  }
+});
+
+// Show Shortcuts Modal
+function showShortcutsModal() {
+  const shortcutsHtml = `
+    <div class="modal active" style="display: flex;">
+      <div class="modal-content">
+        <h2 class="text-2xl font-bold text-gray-800 mb-6">⌨️ شورت‌کات‌ها</h2>
+        <div class="space-y-3">
+          <div class="flex items-center gap-4 p-3 bg-gray-50 rounded-lg">
+            <kbd class="px-3 py-1 bg-gray-200 rounded text-sm font-mono">Ctrl</kbd> + <kbd class="px-3 py-1 bg-gray-200 rounded text-sm font-mono">K</kbd>
+            <span>جستجو</span>
+          </div>
+          <div class="flex items-center gap-4 p-3 bg-gray-50 rounded-lg">
+            <kbd class="px-3 py-1 bg-gray-200 rounded text-sm font-mono">Ctrl</kbd> + <kbd class="px-3 py-1 bg-gray-200 rounded text-sm font-mono">N</kbd>
+            <span>درخواست جدید</span>
+          </div>
+          <div class="flex items-center gap-4 p-3 bg-gray-50 rounded-lg">
+            <kbd class="px-3 py-1 bg-gray-200 rounded text-sm font-mono">Escape</kbd>
+            <span>بستن مودال‌ها</span>
+          </div>
+          <div class="flex items-center gap-4 p-3 bg-gray-50 rounded-lg">
+            <kbd class="px-3 py-1 bg-gray-200 rounded text-sm font-mono">Ctrl</kbd> + <kbd class="px-3 py-1 bg-gray-200 rounded text-sm font-mono">L</kbd>
+            <span>خروج</span>
+          </div>
+          <div class="flex items-center gap-4 p-3 bg-gray-50 rounded-lg">
+            <kbd class="px-3 py-1 bg-gray-200 rounded text-sm font-mono">Ctrl</kbd> + <kbd class="px-3 py-1 bg-gray-200 rounded text-sm font-mono">?</kbd>
+            <span>راهنما</span>
+          </div>
+        </div>
+        <div class="flex gap-3 mt-6">
+          <button type="button" class="btn btn-secondary flex-1" onclick="document.querySelector('.modal.active')?.remove()">بستن</button>
+        </div>
+      </div>
+    </div>
+  `;
+  document.body.insertAdjacentHTML('beforeend', shortcutsHtml);
+}
+
+// Update Online Status - counts users with onlineStatus = 'online' in accounts
+function updateOnlineStatus() {
+  const onlineUsers = allUsers.filter(u => u.onlineStatus === 'online').length;
+
+  // Find or create online status card
+  let onlineStatusCard = document.getElementById('online-status-card');
+  if (!onlineStatusCard) {
+    const statsSection = document.getElementById('stats-section');
+    if (statsSection) {
+      const cardHtml = `
+        <div class="stat-card" id="online-status-card">
+          <div class="flex items-center justify-between mb-2">
+            <span class="text-sm opacity-90">🟢 آنلاین</span>
+            <span class="text-2xl">👥</span>
+          </div>
+          <p id="online-users" class="text-3xl font-bold">${onlineUsers}</p>
+        </div>
+      `;
+      statsSection.insertAdjacentHTML('beforeend', cardHtml);
+      onlineStatusCard = document.getElementById('online-status-card');
+    }
+  } else {
+    const onlineUsersElement = document.getElementById('online-users');
+    if (onlineUsersElement) {
+      onlineUsersElement.textContent = onlineUsers;
+    }
+  }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  // Load theme on all pages
+  loadTheme();
+
+  // Only init app if we're on a page that requires authentication
+  if (!window.location.pathname.includes('login.html') &&
+    !window.location.pathname.includes('signup.html')) {
+    initApp();
+  }
+});
 function filterRequests(filter) {
   currentRequestFilter = filter;
   document.querySelectorAll('[id^="filter-request-"]').forEach(btn => btn.classList.remove('active-filter'));
@@ -2485,7 +2835,7 @@ async function syncMotorcyclesWithGoogleSheets(allDataRef) {
         .map(moto => ({ ...moto, totalUsageTime: normalizeTime(moto.totalUsageTime || '00:00') }));
       const nonMotorcycleData = allDataRef.filter(d => d.type !== 'motorcycle');
       const localMotorcycles = allDataRef.filter(d => d.type === 'motorcycle')
-        .map(moto => ({ ...moto, totalUsageTime: normalizeTime(moto.totalUsageTime || '00:00') }));  
+        .map(moto => ({ ...moto, totalUsageTime: normalizeTime(moto.totalUsageTime || '00:00') }));
       const motorsMap = new Map(localMotorcycles.map(m => [m.__backendId, m]));
       gsMotorcycles.forEach(gsMoto => {
         if (motorsMap.has(gsMoto.__backendId)) {
@@ -2599,16 +2949,16 @@ function setTimeInterval(interval) {
     document.getElementById('custom-days-modal').classList.add('active');
     document.getElementById('custom-days-input').focus();
     document.getElementById('interval-dropdown').classList.add('hidden');
-    return; 
+    return;
   } else {
     currentTimeInterval = interval;
     currentCustomDays = 1;
-    currentIntervalDisplay = 
+    currentIntervalDisplay =
       interval === 'day' ? 'روز' :
-      interval === 'week' ? 'هفته' :
-      interval === 'month' ? 'ماه' :
-      interval === 'year' ? 'سال' :
-      'هیچکدام';
+        interval === 'week' ? 'هفته' :
+          interval === 'month' ? 'ماه' :
+            interval === 'year' ? 'سال' :
+              'هیچکدام';
 
     const intervalButton = document.getElementById('interval-button');
     if (intervalButton) {
