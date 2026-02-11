@@ -1,6 +1,6 @@
 // Application Constants
-const IDLE_TIMEOUT_SECONDS = 21600; 
-const SYNC_INTERVAL_MS = 7000; 
+const IDLE_TIMEOUT_SECONDS = 21600;
+const SYNC_INTERVAL_MS = 7000;
 const MAX_KILOMETERS = 1000000;
 const MIN_KILOMETERS = 0;
 const SEARCH_DEBOUNCE_MS = 300;
@@ -2185,6 +2185,8 @@ async function deleteMotorcycle(motorcycleId) {
   }
   const result = await window.dataSdk.delete(motorcycle);
   if (result.isOk) {
+    // Immediate sync to ensure UI reflects the deletion from Google Sheets
+    await syncMotorcyclesWithGoogleSheets(allData);
     showToast('موتور سکیل با موفقیت حذف شد', '✅');
     updateCurrentPage();
   } else {
