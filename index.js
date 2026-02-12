@@ -45,9 +45,13 @@ let currentIntervalDisplay = 'هیچکدام';
 
 async function syncAllData() {
   try {
+    console.log('Starting full data sync...');
     await syncEmployeesWithGoogleSheets(allData);
+    console.log('Employees synced:', allData.filter(d => d.type === 'employee').length);
     await syncMotorcyclesWithGoogleSheets(allData);
+    console.log('Motorcycles synced:', allData.filter(d => d.type === 'motorcycle').length);
     await syncRequestsWithGoogleSheets(allData);
+    console.log('Requests synced:', allData.filter(d => d.type === 'request').length);
     await saveData(allData);
     dataHandler.onDataChanged(allData);
     console.log('Data synced successfully');
@@ -1003,6 +1007,15 @@ function updateDashboard() {
   const requests = allData.filter(d => d.type === 'request');
   const activeRequests = requests.filter(r => r.status === 'pending' || r.status === 'active');
   const inUse = requests.filter(r => r.status === 'active');
+
+  console.log('Dashboard update:', {
+    motorcycles: motorcycles.length,
+    employees: employees.length,
+    requests: requests.length,
+    activeRequests: activeRequests.length,
+    inUse: inUse.length
+  });
+
   if (document.getElementById('total-motorcycles')) document.getElementById('total-motorcycles').textContent = motorcycles.length;
   if (document.getElementById('total-employees')) document.getElementById('total-employees').textContent = employees.length;
   if (document.getElementById('active-requests')) document.getElementById('active-requests').textContent = activeRequests.length;
@@ -1876,6 +1889,7 @@ async function submitNewRequest(event) {
     showToast('درخواست با موفقیت ثبت شد', '✅');
     closeModal('new-request-modal');
     resetRequestForm();
+    // No immediate sync needed - local data already has the request with correct motorcycleId
     updateCurrentPage();
   } else {
     showToast('خطا در ثبت درخواست', '❌');
@@ -2186,6 +2200,7 @@ async function markAsExit(requestId) {
   const result = await window.dataSdk.update(updatedRequest);
   if (result.isOk) {
     showToast('خروج با موفقیت ثبت شد', '✅');
+    // No immediate sync needed - local data already has the updated request
     updateCurrentPage();
   } else {
     showToast('خطا در ثبت خروج', '❌');
@@ -2219,6 +2234,7 @@ async function markAsEntry(requestId) {
   if (result.isOk) {
     await updateMotorcycleUsageAfterCompletion(updatedRequest);
     showToast('ورود با موفقیت ثبت شد', '✅');
+    // No immediate sync needed - local data already has the completed request
     updateCurrentPage();
   } else {
     showToast('خطا در ثبت ورود', '❌');
@@ -2958,9 +2974,26 @@ async function syncRequestsWithGoogleSheets(allDataRef) {
     const result = await callGoogleSheets('readAll', 'request');
     if (result.success) {
       // ONLY use Google Sheets data - ignore local data completely
-      const gsRequests = result.data
+      let gsRequests = result.data
         .map(mapGSToRequest)
         .filter(request => request.__backendId);
+
+      // Match requests to motorcycles by name, color, plate, and department
+      // to set motorcycleId for status calculation
+      const motorcycles = allDataRef.filter(d => d.type === 'motorcycle');
+      for (let req of gsRequests) {
+        const matchingMotor = motorcycles.find(m =>
+          m.motorcycleName === req.motorcycleName &&
+          m.motorcycleColor === req.motorcycleColor &&
+          m.motorcyclePlate === req.motorcyclePlate &&
+          m.motorcycleDepartment === req.motorcycleDepartment
+        );
+        if (matchingMotor) {
+          req.motorcycleId = matchingMotor.__backendId;
+        } else {
+          console.warn('No matching motorcycle found for request:', req);
+        }
+      }
 
       // Keep only non-request data, replace all requests with Google Sheets data
       const nonRequestData = allDataRef.filter(d => d.type !== 'request');
