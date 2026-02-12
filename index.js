@@ -1,6 +1,6 @@
 // Application Constants
 const IDLE_TIMEOUT_SECONDS = 21600;
-const SYNC_INTERVAL_MS = 7000;
+const SYNC_INTERVAL_MS = 8000;
 const MAX_KILOMETERS = 1000000;
 const MIN_KILOMETERS = 0;
 const SEARCH_DEBOUNCE_MS = 300;
@@ -2495,7 +2495,9 @@ async function submitFuelReport(event) {
   const fuelType = document.getElementById('fuel-type').value.trim();
   const fuelAmount = document.getElementById('fuel-amount').value.trim();
   const kilometerAmount = parseFloat(document.getElementById('kilometer-amount').value.trim());
-  if (!fuelType || !fuelAmount || isNaN(kilometerAmount)) {
+  const fuelAdditionDateInput = document.getElementById('fuel-addition-date').value.trim();
+  
+  if (!fuelType || !fuelAmount || isNaN(kilometerAmount) || !fuelAdditionDateInput) {
     showToast('لطفاً همه فیلدها را پر کنید', 'Warning');
     return;
   }
@@ -2503,11 +2505,21 @@ async function submitFuelReport(event) {
     showToast(`میزان کیلومتر باید بین ${MIN_KILOMETERS.toLocaleString()} تا ${MAX_KILOMETERS.toLocaleString()} باشد`, '⚠️');
     return;
   }
+  
+  // Parse the fuel addition date (it's in YYYY-MM-DD format from date input)
+  const fuelAdditionDate = new Date(fuelAdditionDateInput);
+  const year = fuelAdditionDate.getFullYear();
+  const month = String(fuelAdditionDate.getMonth() + 1).padStart(2, '0');
+  const day = String(fuelAdditionDate.getDate()).padStart(2, '0');
+  const formattedFuelAdditionDate = `${year}/${month}/${day}`;
+  
+  // Get current date for automatic "تاریخ" field
   const now = new Date();
-  const year = now.getFullYear();
-  const month = String(now.getMonth() + 1).padStart(2, '0');
-  const day = String(now.getDate()).padStart(2, '0');
-  const reportDate = `${year}/${month}/${day}`;
+  const currentYear = now.getFullYear();
+  const currentMonth = String(now.getMonth() + 1).padStart(2, '0');
+  const currentDay = String(now.getDate()).padStart(2, '0');
+  const currentDate = `${currentYear}/${currentMonth}/${currentDay}`;
+  
   const previousReports = fuelReports.filter(report =>
     report.motorcycleName === selectedMotorcycleForFuel.motorcycleName &&
     report.motorcycleDepartment === selectedMotorcycleForFuel.motorcycleDepartment
@@ -2523,7 +2535,8 @@ async function submitFuelReport(event) {
     fuelType: fuelType,
     fuelAmount: fuelAmount,
     kilometerAmount: kilometerAmount,
-    reportDate: reportDate,
+    reportDate: currentDate, // Automatic date when record is added
+    fuelAdditionDate: formattedFuelAdditionDate, // User selected date
     reporterFullName: reporterFullName,
     totalDistance: 0
   };
