@@ -269,11 +269,13 @@ function mapFuelToGS(item) {
     'پلاک': item.motorcyclePlate || '',
     'دیپارتمنت': item.motorcycleDepartment || '',
     'نوع تیل': item.fuelType || '',
-    'تاریخ': item.reportDate || '',
+    'تاریخ': item.reportDate || '', // Automatic date when record is added
     'میزان تیل': item.fuelAmount || '',
     'میزان کیلومتر': item.kilometerAmount || '',
     'نام کارمند': item.reporterFullName || '',
-    'میزان طی مسیر': item.totalDistance || 0
+    'میزان طی مسیر': item.totalDistance || 0,
+    'تاریخ اضافه کردن تیل': item.fuelAdditionDate || '' // User selected date
+
   };
 }
 
@@ -286,11 +288,12 @@ function mapGSToFuel(record) {
     motorcyclePlate: record['پلاک'] || '',
     motorcycleDepartment: record['دیپارتمنت'] || '',
     fuelType: record['نوع تیل'],
-    reportDate: record['تاریخ'],
+    reportDate: record['تاریخ'] || '',
     fuelAmount: record['میزان تیل'],
     kilometerAmount: record['میزان کیلومتر'],
     reporterFullName: record['نام کارمند'] || '',
-    totalDistance: record['میزان طی مسیر'] || 0
+    totalDistance: record['میزان طی مسیر'] || 0,
+    fuelAdditionDate: record['تاریخ اضافه کردن تیل'] || ''
   };
 }
 
