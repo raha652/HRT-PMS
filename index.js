@@ -1086,7 +1086,19 @@ function renderMotorcycles(motorcycles) {
     container.innerHTML = '<div class="col-span-full text-center py-12 text-gray-300"><p class="text-lg">هیچ موتور سکیلی ثبت نشده است</p></div>';
     return;
   }
-  container.innerHTML = motorcycles.map(motorcycle => `
+  container.innerHTML = motorcycles.map(motorcycle => {
+    // Status badge with color coding
+    const status = motorcycle.motorcycleStatus || 'سالم';
+    let statusClass = '';
+    if (status === 'سالم') {
+      statusClass = 'bg-green-500';
+    } else if (status === 'مفقود') {
+      statusClass = 'bg-red-500';
+    } else if (status === 'خراب') {
+      statusClass = 'bg-red-500';
+    }
+
+    return `
     <div class="card p-6 cursor-pointer hover:shadow-2xl transition-all duration-300"
          onclick="showMotorcycleDetails('${motorcycle.__backendId}')">
       <div class="flex items-center gap-4 mb-4">
@@ -1101,9 +1113,14 @@ function renderMotorcycles(motorcycles) {
       </div>
       <div class="border-t border-gray-600 pt-4">
         <p class="text-sm text-gray-100">🔢 پلاک: ${motorcycle.motorcyclePlate}</p>
+        <div class="mt-2 flex items-center gap-2">
+          <span class="text-sm text-gray-100">وضعیت:</span>
+          <span class="px-3 py-1 rounded-full text-xs font-semibold text-white ${statusClass}">${status}</span>
+        </div>
       </div>
     </div>
-  `).join('');
+    `;
+  }).join('');
 }
 function showMotorcycleDetails(motorcycleId) {
   const motorcycle = allData.find(d => d.__backendId === motorcycleId);
@@ -1145,6 +1162,18 @@ function showMotorcycleDetails(motorcycleId) {
     `<div class="motorcycle-icon-large mb-4">🏍️</div>`;
   const licenseHtml = motorcycle.motorcycleLicense ? `<tr><td class="px-4 py-2 font-semibold">نمبر جواز سیر</td><td class="px-4 py-2">${motorcycle.motorcycleLicense}</td></tr>` : '';
   const gpsStatusHtml = motorcycle.motorcycleGpsStatus ? `<tr><td class="px-4 py-2 font-semibold">وضعیت جی پی اس</td><td class="px-4 py-2">${motorcycle.motorcycleGpsStatus}</td></tr>` : '';
+
+  // Status badge with color coding
+  const conditionStatus = motorcycle.motorcycleStatus || 'سالم';
+  let conditionClass = '';
+  if (conditionStatus === 'سالم') {
+    conditionClass = 'bg-green-100 text-green-800';
+  } else if (conditionStatus === 'مفقود') {
+    conditionClass = 'bg-red-100 text-red-800';
+  } else if (conditionStatus === 'خراب') {
+    conditionClass = 'bg-red-100 text-red-800';
+  }
+  const conditionHtml = `<tr><td class="px-4 py-2 font-semibold">وضعیت موتور سکیل</td><td class="px-4 py-2"><span class="px-3 py-1 rounded-full text-sm font-semibold ${conditionClass}">${conditionStatus}</span></td></tr>`;
   const documentsButton = motorcycle.motorcycleDocuments ? `<button class="btn btn-secondary text-xs py-1 px-2 ml-2" onclick="window.open('${motorcycle.motorcycleDocuments}', '_blank')">نمایش اسناد</button>` : '';
   const content = `
     <div class="flex flex-col items-center">
@@ -1161,6 +1190,7 @@ function showMotorcycleDetails(motorcycleId) {
             <tr><td class="px-4 py-2 font-semibold text-gray-300">شماره پلاک</td><td class="px-4 py-2 text-gray-200">${motorcycle.motorcyclePlate}</td></tr>
             ${licenseHtml}
             <tr><td class="px-4 py-2 font-semibold text-gray-300">نوعیت اسناد</td><td class="px-4 py-2 text-gray-200">${motorcycle.motorcycleDocumentType}</td></tr>
+            ${conditionHtml}
             <tr><td class="px-4 py-2 font-semibold text-gray-300">نمبر شاسی</td><td class="px-4 py-2 text-gray-200">${motorcycle.motorcycleChassisNumber}</td></tr>
             <tr><td class="px-4 py-2 font-semibold text-gray-300">نمبر انجین</td><td class="px-4 py-2 text-gray-200">${motorcycle.motorcycleEngineNumber}</td></tr>
             <tr><td class="px-4 py-2 font-semibold text-gray-300">جی پی اس</td><td class="px-4 py-2 text-gray-200">${motorcycle.motorcycleGps}</td></tr>
@@ -1348,7 +1378,23 @@ function renderMotorcycleStatus(motorcycles, requests) {
       </div>
       <div class="border-t border-gray-600 pt-4">
         <p class="text-sm text-gray-100 mb-2">🔢 پلاک: ${data.motorcycle.motorcyclePlate}</p>
-        ${data.employeeInfo ? `<p class="text-sm text-gray-100 mb-2">${data.employeeInfo}</p>` : ''}
+        
+        <!-- Condition Status (سالم/مفقود/خراب) with color coding -->
+        <div class="mt-2 flex items-center gap-2">
+          <span class="text-sm text-gray-100">وضعیت:</span>
+          ${(() => {
+      const conditionStatus = data.motorcycle.motorcycleStatus || 'سالم';
+      let statusClass = '';
+      if (conditionStatus === 'سالم') {
+        statusClass = 'bg-green-500';
+      } else if (conditionStatus === 'مفقود' || conditionStatus === 'خراب') {
+        statusClass = 'bg-red-500';
+      }
+      return `<span class="px-2 py-0.5 rounded-full text-xs font-semibold text-white ${statusClass}">${conditionStatus}</span>`;
+    })()}
+        </div>
+        
+        ${data.employeeInfo ? `<p class="text-sm text-gray-100 mb-2 mt-2">${data.employeeInfo}</p>` : ''}
         ${data.activeRequest && data.activeRequest.requestDate ? `<p class="text-xs text-gray-100">📅 ${data.activeRequest.requestDate}</p>` : ''}
         ${data.activeRequest && data.activeRequest.exitTime ? `<p class="text-xs text-gray-100">🚀 خروج: ${data.activeRequest.exitTime}</p>` : ''}
       </div>
@@ -1560,9 +1606,24 @@ function populateMotorcycleDropdown() {
     optionsContainer.innerHTML = '<div class="p-3 text-gray-500 text-center">هیچ موتور سکیل آزادی در این دیپارتمنت موجود نیست</div>';
     return;
   }
-  optionsContainer.innerHTML = availableMotorcyclesForRequest.map(moto =>
-    `<div class="p-3 hover:bg-gray-100 cursor-pointer border-b border-gray-100 last:border-b-0" onclick="selectMotorcycle('${moto.__backendId}', '${moto.motorcycleName} - ${moto.motorcycleColor} - ${moto.motorcycleDepartment}')">${moto.motorcycleName} - ${moto.motorcycleColor} - ${moto.motorcycleDepartment}</div>`
-  ).join('');
+  optionsContainer.innerHTML = availableMotorcyclesForRequest.map(moto => {
+    // Status badge with color coding
+    const status = moto.motorcycleStatus || 'سالم';
+    let statusClass = '';
+    if (status === 'سالم') {
+      statusClass = 'bg-green-500';
+    } else if (status === 'مفقود' || status === 'خراب') {
+      statusClass = 'bg-red-500';
+    }
+
+    return `<div class="p-3 hover:bg-gray-100 cursor-pointer border-b border-gray-100 last:border-b-0" onclick="selectMotorcycle('${moto.__backendId}', '${moto.motorcycleName} - ${moto.motorcycleColor} - ${moto.motorcycleDepartment}')">
+      <div class="font-semibold">${moto.motorcycleName} - ${moto.motorcycleColor} - ${moto.motorcycleDepartment}</div>
+      <div class="flex items-center gap-2 mt-1">
+        <span class="text-sm text-gray-600">وضعیت:</span>
+        <span class="px-2 py-0.5 rounded-full text-xs font-semibold text-white ${statusClass}">${status}</span>
+      </div>
+    </div>`;
+  }).join('');
 }
 function searchMotorcycles() {
   const searchTerm = document.getElementById('motorcycle-search').value.toLowerCase();
@@ -1582,9 +1643,24 @@ function searchMotorcycles() {
     optionsContainer.innerHTML = '<div class="p-3 text-gray-500 text-center">هیچ موتور سکیل آزادی یافت نشد</div>';
     return;
   }
-  optionsContainer.innerHTML = filteredMotorcycles.map(moto =>
-    `<div class="p-3 hover:bg-gray-100 cursor-pointer border-b border-gray-100 last:border-b-0" onclick="selectMotorcycle('${moto.__backendId}', '${moto.motorcycleName} - ${moto.motorcycleColor} - ${moto.motorcycleDepartment}')">${moto.motorcycleName} - ${moto.motorcycleColor} - ${moto.motorcycleDepartment}</div>`
-  ).join('');
+  optionsContainer.innerHTML = filteredMotorcycles.map(moto => {
+    // Status badge with color coding
+    const status = moto.motorcycleStatus || 'سالم';
+    let statusClass = '';
+    if (status === 'سالم') {
+      statusClass = 'bg-green-500';
+    } else if (status === 'مفقود' || status === 'خراب') {
+      statusClass = 'bg-red-500';
+    }
+
+    return `<div class="p-3 hover:bg-gray-100 cursor-pointer border-b border-gray-100 last:border-b-0" onclick="selectMotorcycle('${moto.__backendId}', '${moto.motorcycleName} - ${moto.motorcycleColor} - ${moto.motorcycleDepartment}')">
+      <div class="font-semibold">${moto.motorcycleName} - ${moto.motorcycleColor} - ${moto.motorcycleDepartment}</div>
+      <div class="flex items-center gap-2 mt-1">
+        <span class="text-sm text-gray-600">وضعیت:</span>
+        <span class="px-2 py-0.5 rounded-full text-xs font-semibold text-white ${statusClass}">${status}</span>
+      </div>
+    </div>`;
+  }).join('');
 }
 function toggleMotorcycleDropdown() {
   if (document.getElementById('motorcycle-select').disabled) return;
@@ -1690,6 +1766,7 @@ function openEditMotorcycleModal(motorcycleId) {
   document.getElementById('edit-motorcycle-gps').value = motorcycle.motorcycleGps || '';
   document.getElementById('edit-motorcycle-gps-status').value = motorcycle.motorcycleGpsStatus || '';
   document.getElementById('edit-motorcycle-department').value = motorcycle.motorcycleDepartment;
+  document.getElementById('edit-motorcycle-status').value = motorcycle.motorcycleStatus || 'سالم';
   // Don't set file input values - they can't be pre-filled programmatically
   // If there are existing photos, show previews
   if (motorcycle.motorcyclePhoto) {
@@ -1937,6 +2014,7 @@ async function submitNewMotorcycle(event) {
     motorcycleGps: gps,
     motorcycleGpsStatus: gpsStatus,
     motorcycleDepartment: document.getElementById('motorcycle-department').value,
+    motorcycleStatus: document.getElementById('motorcycle-status').value,
     motorcyclePhoto: photoUrl,
     motorcycleDocuments: documentsUrl,
     totalUsageTime: '00:00'
@@ -2012,6 +2090,7 @@ async function submitEditMotorcycle(event) {
     motorcycleGps: gps,
     motorcycleGpsStatus: gpsStatus,
     motorcycleDepartment: document.getElementById('edit-motorcycle-department').value,
+    motorcycleStatus: document.getElementById('edit-motorcycle-status').value,
     motorcyclePhoto: photoInput.files && photoInput.files[0] ? photoUrl : (motorcycle.motorcyclePhoto || ''),
     motorcycleDocuments: documentsInput.files && documentsInput.files[0] ? documentsUrl : (motorcycle.motorcycleDocuments || ''),
     totalUsageTime: motorcycle.totalUsageTime || '00:00'
@@ -2831,34 +2910,68 @@ async function syncMotorcyclesWithGoogleSheets(allDataRef) {
   try {
     const result = await callGoogleSheets('readAll', 'motors');
     if (result.success) {
+      // ONLY use Google Sheets data - ignore local data completely
       const gsMotorcycles = result.data
         .map(mapGSToMotorcycle)
         .filter(moto => moto.__backendId)
         .map(moto => ({ ...moto, totalUsageTime: normalizeTime(moto.totalUsageTime || '00:00') }));
+
+      // Keep only non-motorcycle data, replace all motorcycles with Google Sheets data
       const nonMotorcycleData = allDataRef.filter(d => d.type !== 'motorcycle');
-      const localMotorcycles = allDataRef.filter(d => d.type === 'motorcycle')
-        .map(moto => ({ ...moto, totalUsageTime: normalizeTime(moto.totalUsageTime || '00:00') }));
-      const motorsMap = new Map(localMotorcycles.map(m => [m.__backendId, m]));
-      gsMotorcycles.forEach(gsMoto => {
-        if (motorsMap.has(gsMoto.__backendId)) {
-          const local = motorsMap.get(gsMoto.__backendId);
-          const localMin = timeToMinutes(local.totalUsageTime);
-          const gsMin = timeToMinutes(gsMoto.totalUsageTime);
-          const maxTotal = localMin > gsMin ? local.totalUsageTime : gsMoto.totalUsageTime;
-          const merged = { ...local, ...gsMoto, totalUsageTime: maxTotal };
-          motorsMap.set(gsMoto.__backendId, merged);
-        } else {
-          motorsMap.set(gsMoto.__backendId, gsMoto);
-        }
-      });
       allDataRef.length = 0;
-      allDataRef.push(...nonMotorcycleData, ...Array.from(motorsMap.values()));
+      allDataRef.push(...nonMotorcycleData, ...gsMotorcycles);
       await saveData(allDataRef);
       return true;
     }
     return false;
   } catch (error) {
     console.error('Error syncing motorcycles:', error);
+    return false;
+  }
+}
+
+async function syncEmployeesWithGoogleSheets(allDataRef) {
+  try {
+    const result = await callGoogleSheets('readAll', 'employees');
+    if (result.success) {
+      // ONLY use Google Sheets data - ignore local data completely
+      const gsEmployees = result.data
+        .map(mapGSToEmployee)
+        .filter(employee => employee.__backendId);
+
+      // Keep only non-employee data, replace all employees with Google Sheets data
+      const nonEmployeeData = allDataRef.filter(d => d.type !== 'employee');
+      allDataRef.length = 0;
+      allDataRef.push(...nonEmployeeData, ...gsEmployees);
+      await saveData(allDataRef);
+      return true;
+    }
+    return false;
+  } catch (error) {
+    console.error('Error syncing employees:', error);
+    return false;
+  }
+}
+
+async function syncRequestsWithGoogleSheets(allDataRef) {
+  try {
+    const result = await callGoogleSheets('readAll', 'request');
+    if (result.success) {
+      // ONLY use Google Sheets data - ignore local data completely
+      const gsRequests = result.data
+        .map(mapGSToRequest)
+        .filter(request => request.__backendId);
+
+      // Keep only non-request data, replace all requests with Google Sheets data
+      const nonRequestData = allDataRef.filter(d => d.type !== 'request');
+      allDataRef.length = 0;
+      allDataRef.push(...nonRequestData, ...gsRequests);
+      await saveData(allDataRef);
+      return true;
+    }
+    return false;
+  } catch (error) {
+    console.error('Error syncing requests:', error);
     return false;
   }
 }
