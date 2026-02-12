@@ -71,8 +71,8 @@ function mapMotorcycleToGS(item) {
     'دیپارتمنت': item.motorcycleDepartment,
     'URL عکس': item.motorcyclePhoto || '',
     'URL اسناد': item.motorcycleDocuments || '',
-    'مجموعه استفاده': item.totalUsageTime || '00:00'
-
+    'مجموعه استفاده': item.totalUsageTime || '00:00',
+    'وضعیت موتور سکیل': item.motorcycleStatus || 'سالم'
   };
 }
 function mapGSToMotorcycle(record) {
@@ -92,30 +92,23 @@ function mapGSToMotorcycle(record) {
     motorcycleDepartment: record['دیپارتمنت'],
     motorcyclePhoto: record['URL عکس'] || '',
     motorcycleDocuments: record['URL اسناد'] || '',
-    totalUsageTime: record['مجموعه استفاده'] || '00:00'
-
+    totalUsageTime: record['مجموعه استفاده'] || '00:00',
+    motorcycleStatus: record['وضعیت موتور سکیل'] || 'سالم'
   };
 }
 async function syncMotorcyclesWithGoogleSheets(allDataRef) {
   try {
     const result = await callGoogleSheets('readAll', 'motors');
     if (result.success) {
+      // ONLY use Google Sheets data - ignore local data completely
       const gsMotorcycles = result.data
         .map(mapGSToMotorcycle)
         .filter(moto => moto.__backendId);
+
+      // Keep only non-motorcycle data, replace all motorcycles with Google Sheets data
       const nonMotorcycleData = allDataRef.filter(d => d.type !== 'motorcycle');
-      const localMotorcycles = allDataRef.filter(d => d.type === 'motorcycle');
-
-      // Create maps for efficient lookup
-      const gsMap = new Map(gsMotorcycles.map(m => [m.__backendId, m]));
-      const localMap = new Map(localMotorcycles.map(m => [m.__backendId, m]));
-
-      // Merge data: Google Sheets is the source of truth
-      // Only keep local motorcycles if they don't exist in Google Sheets (shouldn't happen in normal flow)
-      const mergedMotorcycles = [...gsMotorcycles];
-
       allDataRef.length = 0;
-      allDataRef.push(...nonMotorcycleData, ...mergedMotorcycles);
+      allDataRef.push(...nonMotorcycleData, ...gsMotorcycles);
       await saveData(allDataRef);
       return true;
     }
