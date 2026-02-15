@@ -240,7 +240,8 @@ function mapUserToGS(item) {
     'دیپارتمنت': item.department || 'نامشخص',
     'آدرس عکس': item.photo || '',
     'وضعیت آنلاین': item.onlineStatus || 'offline',
-    'آخرین فعالیت': item.lastActivity || ''
+    'آخرین فعالیت': formatDateTimeReadable(item.lastActivity),
+    'نمایش‌های سفارشی': item.customDisplays || ''
   };
 }
 
@@ -255,7 +256,8 @@ function mapGSToUser(record) {
     department: record['دیپارتمنت'] || 'نامشخص',
     photo: record['آدرس عکس'] || '',
     onlineStatus: record['وضعیت آنلاین'] || 'offline',
-    lastActivity: record['آخرین فعالیت'] || ''
+    lastActivity: record['آخرین فعالیت'] || '',
+    customDisplays: record['نمایش‌های سفارشی'] || ''
   };
 }
 
@@ -310,5 +312,184 @@ async function syncFuelReports() {
   } catch (error) {
     console.error('Error syncing fuel reports:', error);
     return false;
+  }
+}
+
+function mapFeedbackToGS(item) {
+  const backendId = item.__backendId || (typeof generateId === 'function'
+    ? generateId()
+    : `fb-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`);
+
+  return {
+    'Unique ID':       backendId,
+    'نوع گزارش':      item.reportType,          // "نظریه" یا "پیشنهاد"
+    'نام کامل':       item.fullName,
+    'دیپارتمنت':     item.department,
+    'موتور سکیل':    item.motorcycle || '',     // فقط برای نظریه
+    'رنگ موتور سکیل': item.motorcycleColor || '',     // رنگ موتور سکیل
+    'دیپارتمنت موتور سکیل': item.motorcycleDepartment || '', // دیپارتمنت موتور سکیل
+    'متن':            item.content,
+    'تاریخ':          item.date,                 // تاریخ شمسی
+    'زمان ثبت':       item.timestamp,            // ISO برای مرتب‌سازی دقیق‌تر
+    'وضعیت تعمیر':    item.repairStatus || 'نیاز به تعمیر دارد',  // وضعیت تعمیر
+    'تاریخ تعمیر':    item.repairDate || '',     // تاریخ تعمیر
+    'شخص تعمیر کننده': item.repairedBy || '',   // نام شخصی که تعمیر را انجام داده
+    'پین شده':        item.pinned ? 'بله' : 'خیر'  // آیا پین شده
+  };
+}
+
+function mapGSToFeedback(record) {
+  return {
+    type:          'feedback',
+    __backendId:   record['Unique ID'],
+    reportType:    record['نوع گزارش'],
+    fullName:      record['نام کامل'],
+    department:    record['دیپارتمنت'],
+    motorcycle:    record['موتور سکیل'] || '',
+    motorcycleColor: record['رنگ موتور سکیل'] || '',
+    motorcycleDepartment: record['دیپارتمنت موتور سکیل'] || '',
+    content:       record['متن'],
+    date:          record['تاریخ'],
+    timestamp:     record['زمان ثبت'],
+    repairStatus:  record['وضعیت تعمیر'] || 'نیاز به تعمیر دارد',
+    repairDate:    record['تاریخ تعمیر'] || '',
+    repairedBy:    record['شخص تعمیر کننده'] || '',
+    pinned:        record['پین شده'] === 'بله'
+  };
+}
+
+async function syncFeedbackWithGoogleSheets(allDataRef) {
+  try {
+    const result = await callGoogleSheets('readAll', 'feedback');
+    if (result.success) {
+      const gsFeedback = result.data.map(mapGSToFeedback);
+
+      // فقط feedbackها را جایگزین می‌کنیم
+      const nonFeedbackData = allDataRef.filter(d => d.type !== 'feedback');
+      allDataRef.length = 0;
+      allDataRef.push(...nonFeedbackData, ...gsFeedback);
+
+      await saveData(allDataRef);
+      return true;
+    }
+    return false;
+  } catch (error) {
+    console.error('خطا در همگام‌سازی feedback:', error);
+    return false;
+  }
+}
+
+// توابع مربوط به گزارشات موبلایل (oil)
+function mapOilToGS(item) {
+  const backendId = item.__backendId || (typeof generateId === 'function'
+    ? generateId()
+    : `oil-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`);
+
+  return {
+    'Unique ID': backendId,
+    'Motorcycle ID': item.motorcycleId || '',
+    'نام موتور سکیل': item.motorcycleName || '',
+    'رنگ موتور سکیل': item.motorcycleColor || '',
+    'دیپارتمنت موتور سکیل': item.motorcycleDepartment || '',
+    'پلاک موتور سکیل': item.motorcyclePlate || '',
+    'مقدار موبلایل': item.oilAmount || 0,
+    'نام کامل': item.reporterName || '',
+    'دیپارتمنت کاربر': item.reporterDept || '',
+    'تاریخ': item.date || '',
+    'زمان': item.time || ''
+  };
+}
+
+function mapGSToOil(record) {
+  return {
+    __backendId: record['Unique ID'],
+    motorcycleId: record['Motorcycle ID'] || '',
+    motorcycleName: record['نام موتور سکیل'] || '',
+    motorcycleColor: record['رنگ موتور سکیل'] || '',
+    motorcycleDepartment: record['دیپارتمنت موتور سکیل'] || '',
+    motorcyclePlate: record['پلاک موتور سکیل'] || '',
+    oilAmount: parseFloat(record['مقدار موبلایل']) || 0,
+    reporterName: record['نام کامل'] || '',
+    reporterDept: record['دیپارتمنت کاربر'] || '',
+    date: record['تاریخ'] || '',
+    time: record['زمان'] || ''
+  };
+}
+
+async function syncOilReports() {
+  try {
+    const result = await callGoogleSheets('readAll', 'oil');
+    if (result.success) {
+      return result.data.map(mapGSToOil).filter(r => r.__backendId);
+    }
+    return [];
+  } catch (error) {
+    console.error('Error syncing oil reports:', error);
+    return [];
+  }
+}
+
+// تابع تبدیل تاریخ به فرمت خوانا
+function formatDateTimeReadable(dateValue) {
+  let date;
+  if (typeof dateValue === 'string') {
+    date = new Date(dateValue);
+  } else if (dateValue instanceof Date) {
+    date = dateValue;
+  } else {
+    date = new Date();
+  }
+  
+  if (isNaN(date.getTime())) {
+    date = new Date();
+  }
+  
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  const hours = String(date.getHours()).padStart(2, '0');
+  const minutes = String(date.getMinutes()).padStart(2, '0');
+  const seconds = String(date.getSeconds()).padStart(2, '0');
+  
+  return `${year}/${month}/${day} ${hours}:${minutes}:${seconds}`;
+}
+
+// توابع مربوط به اعلانات (alarm)
+function mapAlarmToGS(item) {
+  const backendId = item.__backendId || (typeof generateId === 'function'
+    ? generateId()
+    : `alarm-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`);
+
+  return {
+    'Unique ID': backendId,
+    'عنوان': item.title || '',
+    'متن': item.message || '',
+    'نام کامل': item.authorName || '',
+    'دیپارتمنت': item.authorDepartment || '',
+    'تاریخ': formatDateTimeReadable(item.createdAt)
+  };
+}
+
+function mapGSToAlarm(record) {
+  return {
+    __backendId: record['Unique ID'],
+    title: record['عنوان'] || '',
+    message: record['متن'] || '',
+    authorName: record['نام کامل'] || '',
+    authorDepartment: record['دیپارتمنت'] || '',
+    createdAt: record['تاریخ'] || new Date().toISOString()
+  };
+}
+
+async function syncAlarmsWithGoogleSheets() {
+  try {
+    const result = await callGoogleSheets('readAll', 'alarm');
+    if (result.success) {
+      return result.data.map(mapGSToAlarm).filter(n => n.__backendId);
+    }
+    return [];
+  } catch (error) {
+    console.error('Error syncing alarms:', error);
+    return [];
   }
 }
