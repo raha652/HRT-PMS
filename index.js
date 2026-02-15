@@ -53,6 +53,7 @@ async function syncAllData() {
     await syncRequestsWithGoogleSheets(allData);
     console.log('Requests synced:', allData.filter(d => d.type === 'request').length);
     await saveData(allData);
+    await syncFeedbackWithGoogleSheets(allData);
     dataHandler.onDataChanged(allData);
     console.log('Data synced successfully');
   } catch (error) {
@@ -141,7 +142,7 @@ async function loadUsers() {
   try {
     const stored = localStorage.getItem(usersStorageKey);
     allUsers = stored && stored !== 'undefined' ? JSON.parse(stored) : [];
-    if (allUsers.length === 0) {
+if (allUsers.length === 0) {
       const defaultAdmin = {
         __backendId: generateId(),
         fullName: 'شهاب حمیدی',
@@ -150,7 +151,8 @@ async function loadUsers() {
         role: 'admin',
         position: 'Electrical ENG',
         department: 'پاور',
-        photo: 'https://i.ibb.co/bcmdRGx/photo-2025-11-07-17-46-35.jpg'
+        photo: 'https://i.ibb.co/bcmdRGx/photo-2025-11-07-17-46-35.jpg',
+        customDisplays: 'تعمیرات,اعلانات' // No maintenance permission by default - must be enabled in account settings
       };
       allUsers.push(defaultAdmin);
       await saveUsers();
@@ -241,7 +243,7 @@ async function updateUser(userId, updatedData) {
   }
   return { isOk: true };
 }
-function openEditAccountModal(userId, username, fullName, password, role, position, department) {
+function openEditAccountModal(userId, username, fullName, password, role, position, department, customDisplays) {
   if (currentUserRole !== 'admin') {
     showToast('شما دسترسی به ویرایش اکانت ندارید', '⚠️');
     return;
@@ -253,6 +255,12 @@ function openEditAccountModal(userId, username, fullName, password, role, positi
   document.getElementById('edit-account-role').value = role;
   document.getElementById('edit-account-position').value = position;
   document.getElementById('edit-account-department').value = department;
+  
+  // Parse custom displays
+  const displays = customDisplays ? customDisplays.split(',') : [];
+  document.getElementById('edit-account-show-maintenance').checked = displays.includes('تعمیرات');
+  document.getElementById('edit-account-show-notifications').checked = displays.includes('اعلانات');
+  
   document.getElementById('edit-account-form').dataset.userId = userId;
   document.getElementById('edit-account-modal').classList.add('active');
 }
@@ -265,11 +273,19 @@ async function submitEditAccount(event) {
   const role = document.getElementById('edit-account-role').value;
   const position = document.getElementById('edit-account-position').value.trim();
   const department = document.getElementById('edit-account-department').value.trim();
+  
+  // Get custom displays
+  const showMaintenance = document.getElementById('edit-account-show-maintenance').checked;
+  const showNotifications = document.getElementById('edit-account-show-notifications').checked;
+  const customDisplays = [];
+  if (showMaintenance) customDisplays.push('تعمیرات');
+  if (showNotifications) customDisplays.push('اعلانات');
+  
   if (!fullName || !username || !password || !role || !position || !department) {
     showToast('لطفاً همه فیلدها را پر کنید', '⚠️');
     return;
   }
-  const updatedData = { fullName, username, password, role, position, department };
+  const updatedData = { fullName, username, password, role, position, department, customDisplays: customDisplays.join(',') };
   const result = await updateUser(userId, updatedData);
   if (result.isOk) {
     showToast('اکانت با موفقیت به‌روزرسانی شد', '✅');
@@ -285,6 +301,17 @@ async function syncUsersWithGoogleSheets() {
       const gsUsers = result.data
         .map(mapGSToUser)
         .filter(user => user.__backendId);
+      
+      // Preserve customDisplays for admin user and merge with local data
+      const localUsers = [...allUsers];
+      
+      for (let gsUser of gsUsers) {
+        const localUser = localUsers.find(u => u.username === gsUser.username);
+        if (localUser && localUser.customDisplays && !gsUser.customDisplays) {
+          gsUser.customDisplays = localUser.customDisplays;
+        }
+      }
+      
       const defaultAdminExists = gsUsers.some(u => u.username === 'admin');
       if (!defaultAdminExists) {
         const defaultAdmin = {
@@ -295,10 +322,13 @@ async function syncUsersWithGoogleSheets() {
           role: 'admin',
           position: 'Electrical ENG',
           department: 'پاور',
-          photo: 'https://i.ibb.co/bcmdRGx/photo-2025-11-07-17-46-35.jpg'
+          photo: 'https://i.ibb.co/bcmdRGx/photo-2025-11-07-17-46-35.jpg',
+          customDisplays: 'تعمیرات,اعلانات' // Admin needs to explicitly enable maintenance
         };
         gsUsers.push(defaultAdmin);
       }
+      // Note: We don't force customDisplays on admin anymore
+      // Each user must have maintenance explicitly enabled in their account
       allUsers = gsUsers;
       await saveUsers(allUsers);
       return true;
@@ -440,7 +470,8 @@ function updateDepartments() {
 const passwords = {
   management: '456',
   motorcycle: 'motor123',
-  employee: 'staff456'
+  employee: 'staff456',
+  maintenance: '234'
 };
 const dataHandler = {
   onDataChanged(data) {
@@ -599,9 +630,54 @@ async function setUserOnlineStatus(username, status) {
       // Sync with Google Sheets
       const gsData = mapUserToGS(user);
       await callGoogleSheets('update', 'accounts', gsData);
+      
+      // آپدیت وضعیت آنلاین در داشبورد
+      updateOnlineStatus();
     }
   } catch (error) {
     console.error('Error setting online status:', error);
+  }
+}
+
+// بررسی و آپدیت وضعیت آنلاین کاربران (5 دقیقه عدم فعالیت = آفلاین)
+async function checkAndUpdateOnlineStatus() {
+  const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
+  let updated = false;
+  
+  for (let i = 0; i < allUsers.length; i++) {
+    const user = allUsers[i];
+    if (user.onlineStatus === 'online' && user.lastActivity) {
+      const lastActivity = new Date(user.lastActivity);
+      if (lastActivity < fiveMinutesAgo) {
+        user.onlineStatus = 'offline';
+        updated = true;
+        
+        // آپدیت در Google Sheets
+        try {
+          const gsData = mapUserToGS(user);
+          await callGoogleSheets('update', 'accounts', gsData);
+        } catch (e) {
+          console.error('Error updating offline status:', e);
+        }
+      }
+    }
+  }
+  
+  if (updated) {
+    await saveUsers(allUsers);
+    updateOnlineStatus();
+  }
+}
+
+// آپدیت فعالیت کاربر فعلی
+function updateUserActivity() {
+  if (window.currentUser && window.currentUser.username) {
+    const user = allUsers.find(u => u.username === window.currentUser.username);
+    if (user) {
+      user.lastActivity = new Date().toISOString();
+      user.onlineStatus = 'online';
+      saveUsers(allUsers);
+    }
   }
 }
 
@@ -641,11 +717,21 @@ function renderAccounts() {
     if (currentUserRole === 'admin') {
       actionButtons = `
         <div class="flex items-center gap-2">
-          <button class="btn btn-primary px-3 py-1 text-sm" onclick="openEditAccountModal('${user.__backendId}', '${user.username}', '${user.fullName}', '${user.password}', '${user.role}', '${user.position}', '${user.department || ''}')">✏️ ویرایش</button>
+          <button class="btn btn-primary px-3 py-1 text-sm" onclick="openEditAccountModal('${user.__backendId}', '${user.username}', '${user.fullName}', '${user.password}', '${user.role}', '${user.position}', '${user.department || ''}', '${user.customDisplays || ''}')">✏️ ویرایش</button>
           <button class="delete-btn" onclick="deleteUser('${user.__backendId}')">🗑️ حذف</button>
         </div>
       `;
     }
+    
+    // Display custom displays
+    let customDisplaysHtml = '';
+    if (user.customDisplays) {
+      const displays = user.customDisplays.split(',').filter(d => d);
+      if (displays.length > 0) {
+        customDisplaysHtml = `<p class="text-gray-200 mt-1">نمایش‌ها: ${displays.join('، ')}</p>`;
+      }
+    }
+    
     return `
       <div class="card p-6">
         <div class="flex items-center justify-between">
@@ -659,6 +745,7 @@ function renderAccounts() {
               <p class="text-gray-200 mt-1">نقش: ${user.role === 'admin' ? 'ادمین' : 'کاربر'}</p>
               <p class="text-gray-200 mt-1">موقعیت شغلی: ${user.position || 'نامشخص'}</p>
               <p class="text-gray-200 mt-1">دیپارتمنت: ${user.department || 'نامشخص'}</p>
+              ${customDisplaysHtml}
             </div>
           </div>
           ${actionButtons}
@@ -782,11 +869,19 @@ async function submitNewAccount(event) {
   const role = document.getElementById('account-role').value;
   const position = document.getElementById('account-position').value.trim();
   const department = document.getElementById('account-department').value.trim();
+  
+  // Get custom displays
+  const showMaintenance = document.getElementById('account-show-maintenance').checked;
+  const showNotifications = document.getElementById('account-show-notifications').checked;
+  const customDisplays = [];
+  if (showMaintenance) customDisplays.push('تعمیرات');
+  if (showNotifications) customDisplays.push('اعلانات');
+  
   if (!fullName || !username || !password || !role || !position || !department) {
     showToast('لطفاً همه فیلدها را پر کنید', '⚠️');
     return;
   }
-  const result = await createUser({ fullName, username, password, role, position, department });
+  const result = await createUser({ fullName, username, password, role, position, department, customDisplays: customDisplays.join(',') });
   if (result.isOk) {
     showToast('اکانت با موفقیت اضافه شد', '✅');
     closeModal('new-account-modal');
@@ -850,12 +945,15 @@ async function initApp() {
   if (newAccountBtn && currentUserRole !== 'admin') {
     newAccountBtn.classList.add('hidden');
   }
-  if (getCurrentPage() === 'management') {
+if (getCurrentPage() === 'management') {
     const accountsCard = document.querySelector('button[onclick*="accounts"], .card[onclick*="accounts"], div[onclick*="accounts"], [onclick*="accounts"]');
     if (accountsCard && currentUserRole !== 'admin') {
       accountsCard.classList.add('hidden');
     }
   }
+  
+  // Note: Maintenance card should always be visible
+  // Password requirement is handled in openPasswordModal function
   updateDateTime();
   setInterval(updateDateTime, 60000);
   hideLoading();
@@ -958,6 +1056,18 @@ async function initApp() {
   }
   setupIdleLogout();
   setInterval(syncAllData, SYNC_INTERVAL_MS); // Use named constant
+  
+  // بررسی وضعیت آنلاین هر 1 دقیقه
+  setInterval(checkAndUpdateOnlineStatus, 60000);
+  
+  // Load notification badge
+  loadNotificationBadge();
+  setInterval(loadNotificationBadge, 30000); // Update every 30 seconds
+  
+  // آپدیت فعالیت کاربر در هر حرکت ماوس یا کلیک
+  ['mousemove', 'keydown', 'click', 'scroll'].forEach(event => {
+    document.addEventListener(event, updateUserActivity, true);
+  });
 }
 function setupIdleLogout() {
   if (typeof window.idleTime === 'undefined') {
@@ -1703,6 +1813,25 @@ function openPasswordModal(type) {
     return;
   }
 
+  // Check if user has maintenance permission (customDisplays contains 'تعمیرات')
+  if (type === 'maintenance') {
+    const user = window.currentUser;
+    const displays = user && user.customDisplays ? user.customDisplays.split(',') : [];
+    const hasMaintenancePermission = displays.includes('تعمیرات');
+    
+    if (hasMaintenancePermission) {
+      // User has permission - no password needed
+      navigateTo('./maintenance.html');
+      return;
+    }
+    // User doesn't have permission - ask for password
+    currentPasswordType = type;
+    document.getElementById('password-message').textContent = '🔐 برای دسترسی به تعمیرات، رمز عبور را وارد کنید';
+    document.getElementById('password-modal').classList.add('active');
+    document.getElementById('password-input').focus();
+    return;
+  }
+
   // For other types, admins can skip password
   if (currentUserRole === 'admin') {
     if (type === 'management') {
@@ -1739,6 +1868,8 @@ function verifyPassword(event) {
       openNewMotorcycleModal();
     } else if (currentPasswordType === 'employee') {
       openNewEmployeeModal();
+    } else if (currentPasswordType === 'maintenance') {
+      navigateTo('./maintenance.html');
     }
   } else {
     showToast('رمز عبور اشتباه است', '❌');
@@ -2357,34 +2488,34 @@ document.addEventListener('click', function (event) {
   const departmentSelect = document.getElementById('department-select');
   const employeeSelect = document.getElementById('employee-select');
   const motorcycleSelect = document.getElementById('motorcycle-select');
-  if (departmentDropdown && !departmentSelect.contains(event.target) && !departmentDropdown.contains(event.target)) {
+  if (departmentDropdown && departmentSelect && !departmentSelect.contains(event.target) && !departmentDropdown.contains(event.target)) {
     departmentDropdown.classList.add('hidden');
   }
-  if (employeeDropdown && !employeeSelect.contains(event.target) && !employeeDropdown.contains(event.target)) {
+  if (employeeDropdown && employeeSelect && !employeeSelect.contains(event.target) && !employeeDropdown.contains(event.target)) {
     employeeDropdown.classList.add('hidden');
   }
-  if (motorcycleDropdown && !motorcycleSelect.contains(event.target) && !motorcycleDropdown.contains(event.target)) {
+  if (motorcycleDropdown && motorcycleSelect && !motorcycleSelect.contains(event.target) && !motorcycleDropdown.contains(event.target)) {
     motorcycleDropdown.classList.add('hidden');
   }
   const userDropdown = document.getElementById('user-dropdown');
   const userIcon = document.getElementById('user-profile-icon');
-  if (userDropdown && !userIcon.contains(event.target) && !userDropdown.contains(event.target)) {
+  if (userDropdown && userIcon && !userIcon.contains(event.target) && !userDropdown.contains(event.target)) {
     userDropdown.classList.add('hidden');
   }
   const sortButton = document.getElementById('sort-button');
   const sortDropdown = document.getElementById('sort-dropdown');
-  if (sortDropdown && !sortButton.contains(event.target) && !sortDropdown.contains(event.target)) {
+  if (sortDropdown && sortButton && !sortButton.contains(event.target) && !sortDropdown.contains(event.target)) {
     sortDropdown.classList.add('hidden');
   }
   const deptButton = document.getElementById('dept-button');
   const deptDropdown = document.getElementById('dept-dropdown');
-  if (deptDropdown && !deptButton.contains(event.target) && !deptDropdown.contains(event.target)) {
+  if (deptDropdown && deptButton && !deptButton.contains(event.target) && !deptDropdown.contains(event.target)) {
     deptDropdown.classList.add('hidden');
   }
 
   const intervalButton = document.getElementById('interval-button');
   const intervalDropdown = document.getElementById('interval-dropdown');
-  if (intervalDropdown && !intervalButton.contains(event.target) && !intervalDropdown.contains(event.target)) {
+  if (intervalDropdown && intervalButton && !intervalButton.contains(event.target) && !intervalDropdown.contains(event.target)) {
     intervalDropdown.classList.add('hidden');
   }
 
@@ -3161,5 +3292,64 @@ function toggleIntervalDropdown() {
   const dropdown = document.getElementById('interval-dropdown');
   if (dropdown) {
     dropdown.classList.toggle('hidden');
+  }
+}
+
+// Get read notifications from localStorage
+function getReadNotifications() {
+  try {
+    const read = localStorage.getItem('readNotifications');
+    return read ? JSON.parse(read) : [];
+  } catch (e) {
+    return [];
+  }
+}
+
+// Mark a notification as read
+function markNotificationAsRead(notificationId) {
+  const read = getReadNotifications();
+  if (!read.includes(notificationId)) {
+    read.push(notificationId);
+    localStorage.setItem('readNotifications', JSON.stringify(read));
+  }
+}
+
+// Mark all notifications as read
+function markAllNotificationsAsRead(notificationIds) {
+  const read = getReadNotifications();
+  notificationIds.forEach(id => {
+    if (!read.includes(id)) {
+      read.push(id);
+    }
+  });
+  localStorage.setItem('readNotifications', JSON.stringify(read));
+}
+
+// Load notification badge count (only unread)
+async function loadNotificationBadge() {
+  try {
+    const result = await callGoogleSheets('readAll', 'alarm');
+    if (result.success && result.data) {
+      const allNotifications = result.data.filter(n => n['Unique ID'] || n.__backendId);
+      const readNotifications = getReadNotifications();
+      
+      // Count only unread notifications
+      const unreadCount = allNotifications.filter(n => {
+        const id = n['Unique ID'] || n.__backendId;
+        return !readNotifications.includes(id);
+      }).length;
+      
+      const badge = document.getElementById('notification-badge');
+      if (badge) {
+        if (unreadCount > 0) {
+          badge.textContent = unreadCount > 99 ? '99+' : unreadCount;
+          badge.classList.remove('hidden');
+        } else {
+          badge.classList.add('hidden');
+        }
+      }
+    }
+  } catch (error) {
+    console.error('Error loading notification badge:', error);
   }
 }
