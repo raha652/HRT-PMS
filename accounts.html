@@ -95,6 +95,19 @@
       <label class="block text-sm font-semibold text-gray-100 mb-2">دیپارتمنت</label>
       <input type="text" id="account-department" class="input-field text-gray-800 mb-6" placeholder="مثال: پاور" required>
     </div>
+    <div>
+      <label class="block text-sm font-semibold text-gray-100 mb-2">نمایش‌های اختصاصی</label>
+      <div class="flex flex-wrap gap-4 mb-6 bg-gray-800 p-4 rounded-lg">
+        <label class="flex items-center gap-2 cursor-pointer">
+          <input type="checkbox" id="account-show-maintenance" class="w-5 h-5 rounded">
+          <span class="text-gray-200">🔧 تعمیرات</span>
+        </label>
+        <label class="flex items-center gap-2 cursor-pointer">
+          <input type="checkbox" id="account-show-notifications" class="w-5 h-5 rounded">
+          <span class="text-gray-200">🔔 اعلانات</span>
+        </label>
+      </div>
+    </div>
     <div class="flex gap-3 mt-6">
       <button type="submit" class="btn btn-success flex-1">✅ ذخیره</button>
       <button type="button" class="btn btn-secondary flex-1" onclick="closeModal('new-account-modal')">❌ انصراف</button>
@@ -159,6 +172,19 @@
         <div>
           <label class="block text-sm font-semibold text-gray-100 mb-2">دیپارتمنت</label>
           <input type="text" id="edit-account-department" class="input-field text-gray-800 mb-6" required>
+        </div>
+        <div>
+          <label class="block text-sm font-semibold text-gray-100 mb-2">نمایش‌های اختصاصی</label>
+          <div class="flex flex-wrap gap-4 mb-6 bg-gray-800 p-4 rounded-lg">
+            <label class="flex items-center gap-2 cursor-pointer">
+              <input type="checkbox" id="edit-account-show-maintenance" class="w-5 h-5 rounded">
+              <span class="text-gray-200">🔧 تعمیرات</span>
+            </label>
+            <label class="flex items-center gap-2 cursor-pointer">
+              <input type="checkbox" id="edit-account-show-notifications" class="w-5 h-5 rounded">
+              <span class="text-gray-200">🔔 اعلانات</span>
+            </label>
+          </div>
         </div>
         <div class="flex gap-3 mt-6">
           <button type="submit" class="btn btn-success flex-1">✅ به‌روزرسانی</button>
