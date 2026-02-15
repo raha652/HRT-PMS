@@ -43,17 +43,23 @@
     <p id="current-user-position" class="text-sm text-gray-100">---</p> 
   </div>
   
+  <!-- Theme Toggle Button -->
+  <button id="theme-toggle" class="w-10 h-10 rounded-full bg-white bg-opacity-20 flex items-center justify-center cursor-pointer hover:bg-opacity-30 transition-all duration-200 text-xl" onclick="toggleTheme()" title="تغییر تم">
+    <span id="theme-icon">☀️</span>
+  </button>
+  
+  <!-- Notification Bell -->
+  <button id="notification-bell" class="w-10 h-10 rounded-full bg-white bg-opacity-20 flex items-center justify-center cursor-pointer hover:bg-opacity-30 transition-all duration-200 text-xl relative" onclick="navigateTo('./notifications.html')" title="اعلانات">
+    <span>🔔</span>
+    <span id="notification-badge" class="absolute -top-1 -left-1 w-5 h-5 bg-red-500 rounded-full text-white text-xs flex items-center justify-center hidden">0</span>
+  </button>
+  
   <!-- Profile Icon -->
   <div class="relative">
     <div id="user-profile-icon" class="w-10 h-10 rounded-full bg-white bg-opacity-20 flex items-center justify-center cursor-pointer hover:bg-opacity-30 transition-all duration-200" onclick="toggleUserDropdown()">
       👤
     </div>
   </div>
-  
-  <!-- Theme Toggle Button -->
-  <button id="theme-toggle" class="w-10 h-10 rounded-full bg-white bg-opacity-20 flex items-center justify-center cursor-pointer hover:bg-opacity-30 transition-all duration-200 text-xl" onclick="toggleTheme()" title="تغییر تم">
-    <span id="theme-icon">☀️</span>
-  </button>
   
   <button id="logout-btn-old" onclick="logout()" class="btn btn-secondary px-4 py-2 rounded text-sm hidden">خروج</button>
 </div>
@@ -89,7 +95,7 @@
      <p id="in-use" class="text-3xl font-bold">0</p>
     </div>
    </div>
-   <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6" id="nav-cards-section">
+   <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6" id="nav-cards-section">
     <div class="card p-8 cursor-pointer hover:scale-105 transition-all duration-300" onclick="navigateTo('./requests.html')">
      <div class="text-center">
       <div class="text-6xl mb-4">
@@ -97,6 +103,15 @@
       </div>
       <h3 class="text-xl font-bold text-white mb-2">درخواستی‌ها</h3>
       <p class="text-gray-300 text-sm">مشاهده درخواست‌های فعال</p>
+     </div>
+    </div>
+    <div class="card p-8 cursor-pointer hover:scale-105 transition-all duration-300" onclick="openPasswordModal('maintenance')">
+     <div class="text-center">
+      <div class="text-6xl mb-4">
+       🔧
+      </div>
+      <h3 class="text-xl font-bold text-white mb-2">تعمیرات</h3>
+      <p class="text-gray-300 text-sm">نظریات و موبایل موتور سکیل‌ها</p>
      </div>
     </div>
     <div class="card p-8 cursor-pointer hover:scale-105 transition-all duration-300" onclick="openPasswordModal('management')">
