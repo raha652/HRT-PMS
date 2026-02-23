@@ -94,11 +94,14 @@ function startNewReport(type) {
   currentFeedbackType = type;
 
   document.getElementById('feedback-type').value = type;
-  document.getElementById('modal-title').textContent = 
-    type === 'پیشنهاد' ? 'ثبت پیشنهاد' : 'ثبت نظریه / مشکلات';
   
-  document.getElementById('content-label').textContent = 
-    type === 'پیشنهاد' ? 'متن پیشنهاد' : 'متن نظریه یا مشکلات';
+  // Use translation function for dynamic text
+  const suggestionKey = t('suggestion');
+  const modalTitleKey = type === suggestionKey ? 'register_suggestion' : 'register_opinion_issues';
+  const contentLabelKey = type === suggestionKey ? 'suggestion_text' : 'opinion_issues_text';
+  
+  document.getElementById('modal-title').textContent = t(modalTitleKey);
+  document.getElementById('content-label').textContent = t(contentLabelKey);
 
   // اطلاعات کاربر جاری
   const user = window.currentUser || {};
@@ -107,7 +110,8 @@ function startNewReport(type) {
 
   // نمایش فیلد موتور سکیل فقط برای "نظریه"
   const motorcycleField = document.getElementById('motorcycle-field');
-  if (type === 'نظریه') {
+  const opinionIssuesKey = t('opinion_issues');
+  if (type === opinionIssuesKey || type === 'نظریه') {
     motorcycleField.style.display = 'block';
     populateMotorcycleSelect();
   } else {
@@ -123,7 +127,7 @@ function populateMotorcycleSelect() {
   const select = document.getElementById('feedback-motorcycle');
   const motorcycles = allData.filter(d => d.type === 'motorcycle');
   
-  select.innerHTML = '<option value="">🏍️ موتور سکیل را انتخاب کنید</option>';
+  select.innerHTML = `<option value="">${t('select_motorcycle_feedback')}</option>`;
   
   motorcycles.forEach(m => {
     const colorName = m.motorcycleColor || 'نامشخص';
@@ -224,7 +228,7 @@ async function submitFeedback(e) {
   const user = window.currentUser || {};
 
   if (!content) {
-    showToast('لطفاً متن گزارش را بنویسید', '⚠️');
+    showToast(t('write_report_text'), '⚠️');
     return;
   }
 
@@ -233,10 +237,11 @@ async function submitFeedback(e) {
   let motorcycleDepartment = '';
   let motorcyclePlate = '';
   
-  if (type === 'نظریه') {
+  const opinionIssuesKey = t('opinion_issues');
+  if (type === opinionIssuesKey || type === 'نظریه') {
     const motoId = document.getElementById('feedback-motorcycle').value;
     if (!motoId) {
-      showToast('لطفاً موتور سکیل را انتخاب کنید', '⚠️');
+      showToast(t('select_motorcycle_warning'), '⚠️');
       return;
     }
     const moto = allData.find(d => d.__backendId === motoId);
@@ -253,8 +258,8 @@ async function submitFeedback(e) {
     __backendId: generateFeedbackId(),
     type: 'feedback',
     reportType: type,
-    fullName: user.fullName || 'نامشخص',
-    department: user.department || 'نامشخص',
+    fullName: user.fullName || t('unknown'),
+    department: user.department || t('unknown'),
     motorcycle: motorcycleName ? `${motorcycleName} (${motorcyclePlate})` : '',
     motorcycleColor: motorcycleColor,
     motorcycleDepartment: motorcycleDepartment,
@@ -270,12 +275,12 @@ async function submitFeedback(e) {
   const result = await callGoogleSheets('create', 'feedback', gsData);
 
   if (result.success) {
-    showToast('گزارش با موفقیت ثبت شد', '✅');
+    showToast(t('report_registered'), '✅');
     closeModal('new-feedback-modal');
     document.getElementById('feedback-form').reset();
   } else {
     console.error('خطا در ثبت:', result);
-    showToast('خطا در ثبت گزارش در گوگل شیت', '❌');
+    showToast(t('report_error'), '❌');
   }
 }
 

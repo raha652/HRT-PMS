@@ -17,7 +17,7 @@ async function loadFeedbacks() {
     }
   } catch (error) {
     console.error('Error loading feedbacks:', error);
-    showToast('خطا در بارگذاری داده‌ها', '❌');
+    showToast(t('data_sync_error'), '❌');
   } finally {
     hideLoading();
   }
@@ -81,6 +81,14 @@ function formatRepairTime(timeStr) {
   return timeStr;
 }
 
+// Get translated status text based on Persian database value
+function getTranslatedStatus(persianStatus) {
+  if (persianStatus === 'نیاز به تعمیر دارد') return t('needs_repair');
+  if (persianStatus === 'تعمیر شد') return t('repaired');
+  if (persianStatus === 'تعمیر نمیشود') return t('cannot_repair');
+  return t('needs_repair');
+}
+
 function renderFeedbacks() {
   const container = document.getElementById('feedback-list');
   const reportType = window.currentTab === 'feedbacks' ? 'نظریه' : 'پیشنهاد';
@@ -100,13 +108,13 @@ function renderFeedbacks() {
     return (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0);
   });
 
-  document.getElementById('item-count').textContent = `${filtered.length} مورد`;
+  document.getElementById('item-count').textContent = `${filtered.length} ${t('items_count')}`;
 
   if (filtered.length === 0) {
     container.innerHTML = `
       <div class="text-center py-12 text-gray-400">
         <div class="text-6xl mb-4">${window.currentTab === 'feedbacks' ? '🗣️' : '💡'}</div>
-        <p class="text-lg">هیچ ${window.currentTab === 'feedbacks' ? 'نظری' : 'پیشنهادی'} ثبت نشده است</p>
+        <p class="text-lg">${window.currentTab === 'feedbacks' ? t('no_feedbacks') : t('no_suggestions')}</p>
       </div>
     `;
     return;
@@ -121,14 +129,15 @@ function renderFeedbacks() {
 
     const pinnedClass = item.pinned ? 'pinned-item' : '';
     const dateDisplay = formatDateDisplay(item.date);
+    const translatedStatus = getTranslatedStatus(item.repairStatus);
 
     return `
       <div class="dropdown p-5 ${pinnedClass}">
         <div class="flex items-start justify-between gap-4">
           <div class="flex-1">
             <div class="flex items-center gap-2 mb-3 flex-wrap">
-              <span class="bg-gray-700 px-3 py-1 rounded text-sm">👤 ${item.fullName || 'نامشخص'}</span>
-              <span class="bg-gray-700 px-3 py-1 rounded text-sm">🏭 ${item.department || 'نامشخص'}</span>
+              <span class="bg-gray-700 px-3 py-1 rounded text-sm">👤 ${item.fullName || t('unknown')}</span>
+              <span class="bg-gray-700 px-3 py-1 rounded text-sm">🏭 ${item.department || t('unknown')}</span>
               ${dateDisplay ? `<span class="bg-gray-600 px-2 py-1 rounded text-xs">📅 ${dateDisplay}</span>` : ''}
               ${item.motorcycle ? `<span class="bg-blue-900/50 px-2 py-1 rounded text-sm">🏍️ ${item.motorcycle}</span>` : ''}
               ${item.motorcycleColor ? `<span class="bg-gray-700 px-2 py-1 rounded text-sm">🎨 ${item.motorcycleColor}</span>` : ''}
@@ -136,19 +145,19 @@ function renderFeedbacks() {
             </div>
 
             <p class="text-gray-200 text-base leading-relaxed">${item.content || ''}</p>
-            ${item.repairDate ? `<p class="text-xs text-white mt-2">🔧 زمان تعمیر: ${formatDateDisplay(item.repairDate)} ${item.repairedBy ? `| 👤 ${item.repairedBy}` : ''}</p>` : ''}
+            ${item.repairDate ? `<p class="text-xs text-white mt-2">🔧 ${t('repair_time')}: ${formatDateDisplay(item.repairDate)} ${item.repairedBy ? `| 👤 ${item.repairedBy}` : ''}</p>` : ''}
           </div>
 
           ${isFeedback ? `
           <div class="flex flex-col gap-2">
             <div class="status-dropdown-wrapper" style="position: relative;">
               <button onclick="toggleStatusDropdown(event, '${item.__backendId}')" class="status-btn px-3 py-2 rounded text-sm font-semibold text-white ${statusClass}">
-                ${item.repairStatus || 'نیاز به تعمیر'}
+                ${translatedStatus}
               </button>
               <div id="dropdown-${item.__backendId}" class="status-dropdown-menu" style="display: none; position: absolute; top: 100%; left: 0; background: linear-gradient(145deg, #1f2937 0%, #374151 100%); border-radius: 12px; box-shadow: 0 10px 40px rgba(0,0,0,0.6); z-index: 9999; min-width: 200px; border: 1px solid rgba(255, 255, 255, 0.2);">
-                <div onclick="updateRepairStatus('${item.__backendId}', 'نیاز به تعمیر دارد')" style="padding: 14px 18px; cursor: pointer; border-bottom: 1px solid rgba(255,255,255,0.1); font-size: 14px; color: #fff; border-radius: 12px 12px 0 0;" onmouseover="this.style.background='rgba(220,38,38,0.5)'" onmouseout="this.style.background='transparent'">🔴 نیاز به تعمیر دارد</div>
-                <div onclick="updateRepairStatus('${item.__backendId}', 'تعمیر نمیشود')" style="padding: 14px 18px; cursor: pointer; border-bottom: 1px solid rgba(255,255,255,0.1); font-size: 14px; color: #fff;" onmouseover="this.style.background='rgba(234,88,12,0.5)'" onmouseout="this.style.background='transparent'">🟠 تعمیر نمیشود</div>
-                <div onclick="updateRepairStatus('${item.__backendId}', 'تعمیر شد')" style="padding: 14px 18px; cursor: pointer; font-size: 14px; color: #fff; border-radius: 0 0 12px 12px;" onmouseover="this.style.background='rgba(22,163,74,0.5)'" onmouseout="this.style.background='transparent'">🟢 تعمیر شد</div>
+                <div onclick="updateRepairStatus('${item.__backendId}', 'نیاز به تعمیر دارد')" style="padding: 14px 18px; cursor: pointer; border-bottom: 1px solid rgba(255,255,255,0.1); font-size: 14px; color: #fff; border-radius: 12px 12px 0 0;" onmouseover="this.style.background='rgba(220,38,38,0.5)'" onmouseout="this.style.background='transparent'">🔴 ${t('needs_repair')}</div>
+                <div onclick="updateRepairStatus('${item.__backendId}', 'تعمیر نمیشود')" style="padding: 14px 18px; cursor: pointer; border-bottom: 1px solid rgba(255,255,255,0.1); font-size: 14px; color: #fff;" onmouseover="this.style.background='rgba(234,88,12,0.5)'" onmouseout="this.style.background='transparent'">🟠 ${t('cannot_repair')}</div>
+                <div onclick="updateRepairStatus('${item.__backendId}', 'تعمیر شد')" style="padding: 14px 18px; cursor: pointer; font-size: 14px; color: #fff; border-radius: 0 0 12px 12px;" onmouseover="this.style.background='rgba(22,163,74,0.5)'" onmouseout="this.style.background='transparent'">🟢 ${t('repaired')}</div>
               </div>
             </div>
 
@@ -198,10 +207,10 @@ async function updateRepairStatus(id, status) {
   const result = await callGoogleSheets('update', 'feedback', gsData);
 
   if (result.success) {
-    showToast('وضعیت با موفقیت آپدیت شد', '✅');
+    showToast(t('status_updated'), '✅');
     renderFeedbacks();
   } else {
-    showToast('خطا در آپدیت وضعیت', '❌');
+    showToast(t('update_error'), '❌');
   }
 }
 

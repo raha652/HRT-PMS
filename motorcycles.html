@@ -3,10 +3,11 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>مدیریت موتور سکیل‌ها - سیستم مدیریت موتور سکیل ها</title>
-    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
-    <link rel="stylesheet" href="./global.css" />
-  </head>
+  <title data-i18n="motorcycles_page_title">مدیریت موتور سکیل‌ها - سیستم مدیریت موتور سکیل ها</title>
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+  <link rel="stylesheet" href="./global.css">
+  <script src="./translations.js"></script>
+ </head>
   <body class="h-screen">
 <div id="loading-overlay" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.65); z-index: 9999; justify-content: center; align-items: center; flex-direction: column; color: white; font-size: 1rem;">
   
@@ -19,7 +20,7 @@
     <div class="smoke smoke2">🌫️</div>
   </div>
   
-  <p style="margin: 10px 0 0; font-weight: bold; text-shadow: 0 0 10px rgba(255,255,255,0.5);">
+  <p style="margin: 10px 0 0; font-weight: bold; text-shadow: 0 0 10px rgba(255,255,255,0.5);" data-i18n="loading">
     در حال بارگذاری...
   </p>
 </div>
@@ -31,15 +32,39 @@
               🏍️
             </div>
             <div>
-              <h1 id="dashboard-title" class="text-3xl font-bold text-white">
+              <h1 id="dashboard-title" class="text-3xl font-bold text-white" data-i18n="dashboard_title">
                 سیستم مدیریت موتور سکیل ها
               </h1>
-              <p id="company-name" class="text-gray-300 mt-1">پارکینگ مرکزی</p>
+              <p id="company-name" class="text-gray-300 mt-1" data-i18n="company_name">پارکینگ هرات</p>
             </div>
           </div>
-          <div class="text-left">
-            <p class="text-sm text-gray-300">تاریخ</p>
-            <p id="current-date" class="text-lg font-bold text-white"></p>
+          <div class="flex items-center gap-4">
+            <!-- Language Toggle Button -->
+            <div class="relative">
+              <button id="language-toggle" class="w-10 h-10 rounded-full bg-white bg-opacity-20 flex items-center justify-center cursor-pointer hover:bg-opacity-30 transition-all duration-200 text-xl" onclick="toggleLanguageDropdown()" title="انتخاب زبان">
+                <span id="language-icon">🌐</span>
+              </button>
+              <div id="language-dropdown" class="absolute hidden z-50 w-48 bg-white rounded-lg shadow-lg top-12 left-0">
+                <div class="py-2">
+                  <button onclick="setLanguage('fa'); toggleLanguageDropdown();" class="w-full text-right px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2">
+                    <span class="text-xl">🇦🇫</span>
+                    <span>فارسی</span>
+                  </button>
+                  <button onclick="setLanguage('en'); toggleLanguageDropdown();" class="w-full text-right px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2">
+                    <span class="text-xl">🇺🇸</span>
+                    <span>English</span>
+                  </button>
+                  <button onclick="setLanguage('ps'); toggleLanguageDropdown();" class="w-full text-right px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2">
+                    <span class="text-xl">🇦🇫</span>
+                    <span>پښتو</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+            <div class="text-left">
+              <p class="text-sm text-gray-300" data-i18n="date">تاریخ</p>
+              <p id="current-date" class="text-lg font-bold text-white"></p>
+            </div>
           </div>
         </div>
       </div>
@@ -51,14 +76,14 @@
                 class="btn btn-secondary"
                 onclick="navigateTo('./management.html')"
               >
-                ← بازگشت به مدیریت
+                ← <span data-i18n="back_to_management">بازگشت به مدیریت</span>
               </button>
-              <h2 class="text-2xl font-bold text-white">
+              <h2 class="text-2xl font-bold text-white" data-i18n="motorcycles_management">
                 مدیریت موتور سکیل‌ها
               </h2>
             </div>
             <button class="btn btn-primary" onclick="openNewMotorcycleModal()">
-              ➕ افزودن موتور سکیل
+              ➕ <span data-i18n="add_new_motorcycle">افزودن موتور سکیل</span>
             </button>
           </div>
           <div
@@ -242,61 +267,65 @@
     </div>
     <div id="new-motorcycle-modal" class="modal">
       <div class="modal-content">
-        <h2 class="text-2xl font-bold text-gray-100 mb-6">
+        <h2 class="text-2xl font-bold text-gray-100 mb-6" data-i18n="add_new_motorcycle">
           افزودن موتور سکیل جدید
         </h2>
         <form id="new-motorcycle-form" onsubmit="submitNewMotorcycle(event)">
           <div class="space-y-4">
             <div>
-              <label class="block text-sm font-semibold text-gray-100 mb-2"
+              <label class="block text-sm font-semibold text-gray-100 mb-2" data-i18n="motorcycle_name"
                 >نام موتور سکیل</label
               >
               <input
                 type="text"
                 id="motorcycle-name"
                 class="input-field block text-sm font-semibold text-gray-700 mb-2"
+                data-i18n-placeholder="example_motorcycle_name"
                 placeholder="مثال: لمر"
                 required
               />
             </div>
             <div>
-              <label class="block text-sm font-semibold text-gray-100 mb-2"
+              <label class="block text-sm font-semibold text-gray-100 mb-2" data-i18n="color"
                 >رنگ</label
               >
               <input
                 type="text"
                 id="motorcycle-color"
                 class="input-field text-gray-700 mb-2"
+                data-i18n-placeholder="example_color"
                 placeholder="مثال: آبی"
                 required
               />
             </div>
             <div>
-              <label class="block text-sm font-semibold text-gray-100 mb-2"
+              <label class="block text-sm font-semibold text-gray-100 mb-2" data-i18n="motorcycle_id"
                 >آیدی</label
               >
               <input
                 type="text"
                 id="motorcycle-id"
                 class="input-field text-gray-700 mb-2"
+                data-i18n-placeholder="example_id"
                 placeholder="مثال: TRN_01"
                 required
               />
             </div>
             <div>
-              <label class="block text-sm font-semibold text-gray-100 mb-2"
+              <label class="block text-sm font-semibold text-gray-100 mb-2" data-i18n="motorcycle_plate"
                 >شماره پلاک</label
               >
               <input
                 type="text"
                 id="motorcycle-plate"
                 class="input-field text-gray-700 mb-2"
+                data-i18n-placeholder="example_plate"
                 placeholder="مثال: TS-01"
                 required
               />
             </div>
             <div>
-              <label class="block text-sm font-semibold text-gray-100 mb-2"
+              <label class="block text-sm font-semibold text-gray-100 mb-2" data-i18n="document_type"
                 >نوعیت اسناد</label
               >
               <select
@@ -305,49 +334,52 @@
                 required
                 onchange="toggleLicenseField()"
               >
-                <option value="">انتخاب کنید</option>
-                <option value="جواز سیر">جواز سیر</option>
-                <option value="اسناد صد فی صد">اسناد صد فی صد</option>
-                <option value="ندارد">ندارد</option>
+                <option value="" data-i18n="select">انتخاب کنید</option>
+                <option value="جواز سیر" data-i18n="travel_permit">جواز سیر</option>
+                <option value="اسناد صد فی صد" data-i18n="full_documents">اسناد صد فی صد</option>
+                <option value="ندارد" data-i18n="no_gps">ندارد</option>
               </select>
             </div>
             <div id="license-number-field" style="display: none">
-              <label class="block text-sm font-semibold text-gray-100 mb-2"
+              <label class="block text-sm font-semibold text-gray-100 mb-2" data-i18n="license_number"
                 >نمبر جواز سیر</label
               >
               <input
                 type="text"
                 id="motorcycle-license"
                 class="input-field text-gray-700 mb-2"
+                data-i18n-placeholder="example_license"
                 placeholder="مثال: 12345"
               />
             </div>
             <div>
-              <label class="block text-sm font-semibold text-gray-100 mb-2"
+              <label class="block text-sm font-semibold text-gray-100 mb-2" data-i18n="chassis_number"
                 >نمبر شاسی</label
               >
               <input
                 type="text"
                 id="motorcycle-chassis-number"
                 class="input-field text-gray-700 mb-2"
+                data-i18n-placeholder="example_chassis"
                 placeholder="مثال: CHS-001"
                 required
               />
             </div>
             <div>
-              <label class="block text-sm font-semibold text-gray-100 mb-2"
+              <label class="block text-sm font-semibold text-gray-100 mb-2" data-i18n="engine_number"
                 >نمبر انجین</label
               >
               <input
                 type="text"
                 id="motorcycle-engine-number"
                 class="input-field text-gray-700 mb-2"
+                data-i18n-placeholder="example_engine"
                 placeholder="مثال: ENG-001"
                 required
               />
             </div>
             <div>
-              <label class="block text-sm font-semibold text-gray-100 mb-2"
+              <label class="block text-sm font-semibold text-gray-100 mb-2" data-i18n="gps"
                 >جی پی اس</label
               >
               <select
@@ -355,38 +387,39 @@
                 class="input-field block text-sm font-semibold text-gray-700 mb-2"
                 onchange="toggleGpsStatusField()"
               >
-                <option value="">انتخاب کنید</option>
-                <option value="دارد">دارد</option>
-                <option value="ندارد">ندارد</option>
+                <option value="" data-i18n="select">انتخاب کنید</option>
+                <option value="دارد" data-i18n="has_gps">دارد</option>
+                <option value="ندارد" data-i18n="no_gps">ندارد</option>
               </select>
             </div>
             <div id="gps-status-field" style="display: none">
-              <label class="block text-sm font-semibold text-gray-100 mb-2"
+              <label class="block text-sm font-semibold text-gray-100 mb-2" data-i18n="gps_status"
                 >وضعیت جی پی اس</label
               >
               <select
                 id="motorcycle-gps-status"
                 class="input-field block text-sm font-semibold text-gray-700 mb-2"
               >
-                <option value="">انتخاب کنید</option>
-                <option value="فعال">فعال</option>
-                <option value="غیر فعال">غیر فعال</option>
+                <option value="" data-i18n="select">انتخاب کنید</option>
+                <option value="فعال" data-i18n="active_gps">فعال</option>
+                <option value="غیر فعال" data-i18n="inactive_gps">غیر فعال</option>
               </select>
             </div>
             <div>
-              <label class="block text-sm font-semibold text-gray-100 mb-2"
+              <label class="block text-sm font-semibold text-gray-100 mb-2" data-i18n="department"
                 >دیپارتمنت</label
               >
               <input
                 type="text"
                 id="motorcycle-department"
                 class="input-field text-gray-700 mb-2"
+                data-i18n-placeholder="example_department"
                 placeholder="مثال: پاور"
                 required
               />
             </div>
             <div>
-              <label class="block text-sm font-semibold text-gray-100 mb-2"
+              <label class="block text-sm font-semibold text-gray-100 mb-2" data-i18n="motorcycle_status"
                 >وضعیت موتور سکیل</label
               >
               <select
@@ -394,13 +427,13 @@
                 class="input-field block text-sm font-semibold text-gray-700 mb-2"
                 required
               >
-                <option value="سالم">سالم</option>
-                <option value="مفقود">مفقود</option>
-                <option value="خراب">خراب</option>
+                <option value="سالم" data-i18n="healthy">سالم</option>
+                <option value="مفقود" data-i18n="missing">مفقود</option>
+                <option value="خراب" data-i18n="broken">خراب</option>
               </select>
             </div>
             <div>
-              <label class="block text-sm font-semibold text-gray-100 mb-2"
+              <label class="block text-sm font-semibold text-gray-100 mb-2" data-i18n="motorcycle_photo"
                 >عکس موتور سکیل</label
               >
               <input
@@ -415,7 +448,7 @@
               </div>
             </div>
             <div>
-              <label class="block text-sm font-semibold text-gray-100 mb-2"
+              <label class="block text-sm font-semibold text-gray-100 mb-2" data-i18n="motorcycle_documents"
                 >اسناد موتور سکیل</label
               >
               <input
@@ -431,14 +464,14 @@
             </div>
             <div class="flex gap-3 mt-6">
               <button type="submit" class="btn btn-success flex-1">
-                ✅ ذخیره
+                ✅ <span data-i18n="save">ذخیره</span>
               </button>
               <button
                 type="button"
                 class="btn btn-secondary flex-1"
                 onclick="closeModal('new-motorcycle-modal')"
               >
-                ❌ انصراف
+                ❌ <span data-i18n="cancel">انصراف</span>
               </button>
             </div>
           </div>
@@ -447,59 +480,63 @@
     </div>
     <div id="edit-motorcycle-modal" class="modal">
       <div class="modal-content">
-        <h2 class="text-2xl font-bold text-gray-100 mb-6">ویرایش موتور سکیل</h2>
+        <h2 class="text-2xl font-bold text-gray-100 mb-6" data-i18n="edit_motorcycle">ویرایش موتور سکیل</h2>
         <form id="edit-motorcycle-form" onsubmit="submitEditMotorcycle(event)">
           <div class="space-y-4">
             <div>
-              <label class="block text-sm font-semibold text-gray-100 mb-2"
+              <label class="block text-sm font-semibold text-gray-100 mb-2" data-i18n="motorcycle_name"
                 >نام موتور سکیل</label
               >
               <input
                 type="text"
                 id="edit-motorcycle-name"
                 class="input-field text-gray-800 mb-2"
+                data-i18n-placeholder="example_motorcycle_name"
                 placeholder="مثال: لمر"
                 required
               />
             </div>
             <div>
-              <label class="block text-sm font-semibold text-gray-100 mb-2"
+              <label class="block text-sm font-semibold text-gray-100 mb-2" data-i18n="color"
                 >رنگ</label
               >
               <input
                 type="text"
                 id="edit-motorcycle-color"
                 class="input-field text-gray-800 mb-2"
+                data-i18n-placeholder="example_color"
                 placeholder="مثال: آبی"
                 required
               />
             </div>
             <div>
-              <label class="block text-sm font-semibold text-gray-100 mb-2"
+              <label class="block text-sm font-semibold text-gray-100 mb-2" data-i18n="motorcycle_id"
                 >آیدی</label
               >
               <input
                 type="text"
                 id="edit-motorcycle-id"
                 class="input-field text-gray-800 mb-2"
+                data-i18n-placeholder="example_id"
                 placeholder="مثال: TRN_01"
                 required
               />
             </div>
             <div>
-              <label class="block text-sm font-semibold text-gray-100 mb-2"
+              <label class="block text-sm font-semibold text-gray-100 mb-2" data-i18n="motorcycle_plate"
                 >شماره پلاک</label
               >
               <input
                 type="text"
                 id="edit-motorcycle-plate"
                 class="input-field text-gray-800 mb-2"
+                data-i18n-placeholder="example_plate"
                 placeholder="مثال: TS-01"
                 required
               />
             </div>
             <div>
-              <label class="block text-sm font-semibold text-gray-100 mb-2"
+              <label class="block text-sm font-semibold text-gray-100 mb-2" data-i18n="document_type"
                 >نوعیت اسناد</label
               >
               <select
@@ -508,49 +545,52 @@
                 required
                 onchange="toggleEditLicenseField()"
               >
-                <option value="">انتخاب کنید</option>
-                <option value="جواز سیر">جواز سیر</option>
-                <option value="اسناد صد فی صد">اسناد صد فی صد</option>
-                <option value="ندارد">ندارد</option>
+                <option value="" data-i18n="select">انتخاب کنید</option>
+                <option value="جواز سیر" data-i18n="travel_permit">جواز سیر</option>
+                <option value="اسناد صد فی صد" data-i18n="full_documents">اسناد صد فی صد</option>
+                <option value="ندارد" data-i18n="no_gps">ندارد</option>
               </select>
             </div>
             <div id="edit-license-number-field" style="display: none">
-              <label class="block text-sm font-semibold text-gray-100 mb-2"
+              <label class="block text-sm font-semibold text-gray-100 mb-2" data-i18n="license_number"
                 >نمبر جواز سیر</label
               >
               <input
                 type="text"
                 id="edit-motorcycle-license"
                 class="input-field text-gray-800 mb-2"
+                data-i18n-placeholder="example_license"
                 placeholder="مثال: 12345"
               />
             </div>
             <div>
-              <label class="block text-sm font-semibold text-gray-100 mb-2"
+              <label class="block text-sm font-semibold text-gray-100 mb-2" data-i18n="chassis_number"
                 >نمبر شاسی</label
               >
               <input
                 type="text"
                 id="edit-motorcycle-chassis-number"
                 class="input-field text-gray-800 mb-2"
+                data-i18n-placeholder="example_chassis"
                 placeholder="مثال: CHS-001"
                 required
               />
             </div>
             <div>
-              <label class="block text-sm font-semibold text-gray-100 mb-2"
+              <label class="block text-sm font-semibold text-gray-100 mb-2" data-i18n="engine_number"
                 >نمبر انجین</label
               >
               <input
                 type="text"
                 id="edit-motorcycle-engine-number"
                 class="input-field text-gray-800 mb-2"
+                data-i18n-placeholder="example_engine"
                 placeholder="مثال: ENG-001"
                 required
               />
             </div>
             <div>
-              <label class="block text-sm font-semibold text-gray-100 mb-2"
+              <label class="block text-sm font-semibold text-gray-100 mb-2" data-i18n="gps"
                 >جی پی اس</label
               >
               <select
@@ -558,38 +598,39 @@
                 class="input-field text-gray-800 mb-2"
                 onchange="toggleEditGpsStatusField()"
               >
-                <option value="">انتخاب کنید</option>
-                <option value="دارد">دارد</option>
-                <option value="ندارد">ندارد</option>
+                <option value="" data-i18n="select">انتخاب کنید</option>
+                <option value="دارد" data-i18n="has_gps">دارد</option>
+                <option value="ندارد" data-i18n="no_gps">ندارد</option>
               </select>
             </div>
             <div id="edit-gps-status-field" style="display: none">
-              <label class="block text-sm font-semibold text-gray-100 mb-2"
+              <label class="block text-sm font-semibold text-gray-100 mb-2" data-i18n="gps_status"
                 >وضعیت جی پی اس</label
               >
               <select
                 id="edit-motorcycle-gps-status"
                 class="input-field text-gray-800 mb-2"
               >
-                <option value="">انتخاب کنید</option>
-                <option value="فعال">فعال</option>
-                <option value="غیر فعال">غیر فعال</option>
+                <option value="" data-i18n="select">انتخاب کنید</option>
+                <option value="فعال" data-i18n="active_gps">فعال</option>
+                <option value="غیر فعال" data-i18n="inactive_gps">غیر فعال</option>
               </select>
             </div>
             <div>
-              <label class="block text-sm font-semibold text-gray-100 mb-2"
+              <label class="block text-sm font-semibold text-gray-100 mb-2" data-i18n="department"
                 >دیپارتمنت</label
               >
               <input
                 type="text"
                 id="edit-motorcycle-department"
                 class="input-field text-gray-800 mb-2"
+                data-i18n-placeholder="example_department"
                 placeholder="مثال: پاور"
                 required
               />
             </div>
             <div>
-              <label class="block text-sm font-semibold text-gray-100 mb-2"
+              <label class="block text-sm font-semibold text-gray-100 mb-2" data-i18n="motorcycle_status"
                 >وضعیت موتور سکیل</label
               >
               <select
@@ -597,13 +638,13 @@
                 class="input-field text-gray-800 mb-2"
                 required
               >
-                <option value="سالم">سالم</option>
-                <option value="مفقود">مفقود</option>
-                <option value="خراب">خراب</option>
+                <option value="سالم" data-i18n="healthy">سالم</option>
+                <option value="مفقود" data-i18n="missing">مفقود</option>
+                <option value="خراب" data-i18n="broken">خراب</option>
               </select>
             </div>
             <div>
-              <label class="block text-sm font-semibold text-gray-100 mb-2"
+              <label class="block text-sm font-semibold text-gray-100 mb-2" data-i18n="motorcycle_photo_optional"
                 >عکس موتور سکیل (اختیاری)</label
               >
               <input
@@ -618,7 +659,7 @@
               </div>
             </div>
             <div>
-              <label class="block text-sm font-semibold text-gray-100 mb-2"
+              <label class="block text-sm font-semibold text-gray-100 mb-2" data-i18n="motorcycle_documents_optional"
                 >اسناد موتور سکیل (اختیاری)</label>
               <input
                 type="file"
@@ -633,14 +674,14 @@
             </div>
             <div class="flex gap-3 mt-6">
               <button type="submit" class="btn btn-success flex-1">
-                ✅ ذخیره تغییرات
+                ✅ <span data-i18n="save">ذخیره</span>
               </button>
               <button
                 type="button"
                 class="btn btn-secondary flex-1"
                 onclick="closeModal('edit-motorcycle-modal')"
               >
-                ❌ انصراف
+                ❌ <span data-i18n="cancel">انصراف</span>
               </button>
             </div>
           </div>
@@ -655,7 +696,7 @@
         >
           ❌
         </button>
-        <h2 class="text-2xl font-bold text-gray-300 mb-6">
+        <h2 class="text-2xl font-bold text-gray-300 mb-6" data-i18n="motorcycle_details">
           🏍️ جزئیات کامل موتور سکیل
         </h2>
         <div
@@ -665,10 +706,10 @@
         </div>
         <div class="flex gap-3 mt-6 pt-4 border-t">
           <button id="edit-from-details-btn" class="btn btn-primary flex-1">
-            ✏️ ویرایش
+            ✏️ <span data-i18n="edit">ویرایش</span>
           </button>
           <button id="delete-from-details-btn" class="btn btn-danger flex-1">
-            🗑️ حذف
+            🗑️ <span data-i18n="delete">حذف</span>
           </button>
         </div>
       </div>

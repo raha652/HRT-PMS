@@ -3,9 +3,10 @@
  <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>سیستم مدیریت موتور سکیل ها</title>
+  <title data-i18n="dashboard_title">سیستم مدیریت موتور سکیل ها</title>
   <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
   <link rel="stylesheet" href="./global.css">
+  <script src="./translations.js"></script>
  </head>
  <body class="h-screen">
 
@@ -20,7 +21,7 @@
     <div class="smoke smoke2">🌫️</div>
   </div>
   
-  <p style="margin: 10px 0 0; font-weight: bold; text-shadow: 0 0 10px rgba(255,255,255,0.5);">
+  <p style="margin: 10px 0 0; font-weight: bold; text-shadow: 0 0 10px rgba(255,255,255,0.5);" data-i18n="loading">
     در حال بارگذاری...
   </p>
 </div>
@@ -33,8 +34,8 @@
        🏍️
       </div>
       <div>
-       <h1 id="dashboard-title" class="text-3xl font-bold text-white">سیستم مدیریت موتور سکیل ها</h1>
-       <p id="company-name" class="text-gray-300 mt-1">پارکینگ مرکزی</p>
+       <h1 id="dashboard-title" class="text-3xl font-bold text-white" data-i18n="dashboard_title">سیستم مدیریت موتور سکیل ها</h1>
+       <p id="company-name" class="text-gray-300 mt-1" data-i18n="company_name">پارکینگ هرات</p>
       </div>
      </div>
 <div class="flex items-center gap-4 relative">
@@ -44,9 +45,32 @@
   </div>
   
   <!-- Theme Toggle Button -->
-  <button id="theme-toggle" class="w-10 h-10 rounded-full bg-white bg-opacity-20 flex items-center justify-center cursor-pointer hover:bg-opacity-30 transition-all duration-200 text-xl" onclick="toggleTheme()" title="تغییر تم">
+  <button id="theme-toggle" class="w-10 h-10 rounded-full bg-white bg-opacity-20 flex items-center justify-center cursor-pointer hover:bg-opacity-30 transition-all duration-200 text-xl" onclick="toggleTheme()" data-i18n-title="change_theme" title="تغییر تم">
     <span id="theme-icon">☀️</span>
   </button>
+  
+  <!-- Language Toggle Button -->
+  <div class="relative">
+    <button id="language-toggle" class="w-10 h-10 rounded-full bg-white bg-opacity-20 flex items-center justify-center cursor-pointer hover:bg-opacity-30 transition-all duration-200 text-xl" onclick="toggleLanguageDropdown()" data-i18n-title="select_language" title="انتخاب زبان">
+      <span id="language-icon">🌐</span>
+    </button>
+    <div id="language-dropdown" class="absolute hidden z-50 w-48 bg-white rounded-lg shadow-lg top-12 left-0">
+      <div class="py-2">
+        <button onclick="setLanguage('fa'); toggleLanguageDropdown();" class="w-full text-right px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2">
+          <span class="text-xl">🇦🇫</span>
+          <span>فارسی</span>
+        </button>
+        <button onclick="setLanguage('en'); toggleLanguageDropdown();" class="w-full text-right px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2">
+          <span class="text-xl">🇺🇸</span>
+          <span>English</span>
+        </button>
+        <button onclick="setLanguage('ps'); toggleLanguageDropdown();" class="w-full text-right px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2">
+          <span class="text-xl">🇦🇫</span>
+          <span>پښتو</span>
+        </button>
+      </div>
+    </div>
+  </div>
   
   <!-- Notification Bell -->
   <button id="notification-bell" class="w-10 h-10 rounded-full bg-white bg-opacity-20 flex items-center justify-center cursor-pointer hover:bg-opacity-30 transition-all duration-200 text-xl relative" onclick="navigateTo('./notifications.html')" title="اعلانات">
@@ -68,29 +92,29 @@
 
     <div id="user-dropdown" class="absolute hidden z-50 w-48 bg-white rounded-lg shadow-lg">
       <div class="py-2">
-        <button onclick="navigateTo('./profile-settings.html')" class="w-full text-right px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded">تنظیمات پروفایل</button>
-        <button id="logout-btn" onclick="logout()" class="w-full text-right px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded">خروج</button>
+        <button onclick="navigateTo('./profile-settings.html')" class="w-full text-right px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded" data-i18n="profile_settings">تنظیمات پروفایل</button>
+        <button id="logout-btn" onclick="logout()" class="w-full text-right px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded" data-i18n="logout">خروج</button>
       </div>
     </div>
  
    <div class="grid grid-cols-1 md:grid-cols-5 gap-6 mb-6" id="stats-section">
     <div class="stat-card">
-     <div class="flex items-center justify-between mb-2"><span class="text-sm opacity-90">کل موتور سکیل‌ها</span> <span class="text-2xl">🏍️</span>
+     <div class="flex items-center justify-between mb-2"><span class="text-sm opacity-90" data-i18n="total_motorcycles">کل موتور سکیل‌ها</span> <span class="text-2xl">🏍️</span>
      </div>
      <p id="total-motorcycles" class="text-3xl font-bold">0</p>
     </div>
     <div class="stat-card">
-     <div class="flex items-center justify-between mb-2"><span class="text-sm opacity-90">کل کارمندان</span> <span class="text-2xl">👥</span>
+     <div class="flex items-center justify-between mb-2"><span class="text-sm opacity-90" data-i18n="total_employees">کل کارمندان</span> <span class="text-2xl">👥</span>
      </div>
      <p id="total-employees" class="text-3xl font-bold">0</p>
     </div>
     <div class="stat-card">
-     <div class="flex items-center justify-between mb-2"><span class="text-sm opacity-90">درخواست‌های فعال</span> <span class="text-2xl">📋</span>
+     <div class="flex items-center justify-between mb-2"><span class="text-sm opacity-90" data-i18n="active_requests">درخواست‌های فعال</span> <span class="text-2xl">📋</span>
      </div>
      <p id="active-requests" class="text-3xl font-bold">0</p>
     </div>
     <div class="stat-card">
-     <div class="flex items-center justify-between mb-2"><span class="text-sm opacity-90">در حال استفاده</span> <span class="text-2xl">🔄</span>
+     <div class="flex items-center justify-between mb-2"><span class="text-sm opacity-90" data-i18n="in_use">در حال استفاده</span> <span class="text-2xl">🔄</span>
      </div>
      <p id="in-use" class="text-3xl font-bold">0</p>
     </div>
@@ -101,8 +125,8 @@
       <div class="text-6xl mb-4">
        📋
       </div>
-      <h3 class="text-xl font-bold text-white mb-2">درخواستی‌ها</h3>
-      <p class="text-gray-300 text-sm">مشاهده درخواست‌های فعال</p>
+      <h3 class="text-xl font-bold text-white mb-2" data-i18n="requests">درخواستی‌ها</h3>
+      <p class="text-gray-300 text-sm" data-i18n="view_active_requests">مشاهده درخواست‌های فعال</p>
      </div>
     </div>
     <div class="card p-8 cursor-pointer hover:scale-105 transition-all duration-300" onclick="openPasswordModal('maintenance')">
@@ -110,8 +134,8 @@
       <div class="text-6xl mb-4">
        🔧
       </div>
-      <h3 class="text-xl font-bold text-white mb-2">تعمیرات</h3>
-      <p class="text-gray-300 text-sm">مشکلات و موبلایل موتور سکیل‌ها</p>
+      <h3 class="text-xl font-bold text-white mb-2" data-i18n="maintenance">تعمیرات</h3>
+      <p class="text-gray-300 text-sm" data-i18n="maintenance_desc">مشکلات و موبایل موتور سکیل‌ها</p>
      </div>
     </div>
     <div class="card p-8 cursor-pointer hover:scale-105 transition-all duration-300" onclick="openPasswordModal('management')">
@@ -119,8 +143,8 @@
       <div class="text-6xl mb-4">
        ⚙️
       </div>
-      <h3 class="text-xl font-bold text-white mb-2">مدیریت</h3>
-      <p class="text-gray-300 text-sm">مدیریت موتور سکیل‌ها، کارمندان و تاریخچه</p>
+      <h3 class="text-xl font-bold text-white mb-2" data-i18n="management">مدیریت</h3>
+      <p class="text-gray-300 text-sm" data-i18n="management_desc">مدیریت موتور سکیل‌ها، کارمندان و تاریخچه</p>
      </div>
     </div>
     <div class="card p-8 cursor-pointer hover:scale-105 transition-all duration-300" onclick="navigateTo('./request-menu.html')">
@@ -128,8 +152,8 @@
       <div class="text-6xl mb-4">
        📋
       </div>
-      <h3 class="text-xl font-bold text-white mb-2">درخواست دادن</h3>
-      <p class="text-gray-300 text-sm">درخواست و وضعیت موتور سکیل</p>
+      <h3 class="text-xl font-bold text-white mb-2" data-i18n="new_request">درخواست دادن</h3>
+      <p class="text-gray-300 text-sm" data-i18n="new_request_desc">درخواست و وضعیت موتور سکیل</p>
      </div>
     </div>
    </div>
@@ -235,7 +259,7 @@
   </div>
   <footer class="absolute bottom-2 left-6 right-6 text-center flex justify-between items-center text-white text-sm border-t border-gray-300">
     <div class="mt-2">
-      Developed by En.ShAhAb HaMiDi</a> & <a href="https://github.com/emadrasooli" target="_blank">Emad Rasooli</a>
+      Developed by En.ShAhAb HaMiDi</a>
     </div>
     <div>
       <div class="flex items-center gap-2">

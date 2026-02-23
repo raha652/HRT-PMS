@@ -3,9 +3,10 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>نظریات و پیشنهادات - سیستم مدیریت موتور سکیل ها</title>
+  <title data-i18n="feedback_page_title">نظریات و پیشنهادات - سیستم مدیریت موتور سکیل ها</title>
   <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
   <link rel="stylesheet" href="./global.css">
+  <script src="./translations.js"></script>
 </head>
 <body class="h-screen bg-gray-950 text-white">
 
@@ -17,7 +18,7 @@
     <div class="smoke smoke1">💨</div>
     <div class="smoke smoke2">🌫️</div>
   </div>
-  <p style="margin: 10px 0 0; font-weight: bold; text-shadow: 0 0 10px rgba(255,255,255,0.5);">
+  <p style="margin: 10px 0 0; font-weight: bold; text-shadow: 0 0 10px rgba(255,255,255,0.5);" data-i18n="loading">
     در حال بارگذاری...
   </p>
 </div>
@@ -29,33 +30,57 @@
       <div class="flex items-center gap-4">
         <div class="motorcycle-icon">✍️</div>
         <div>
-          <h1 class="text-3xl font-bold text-white">نظریات و پیشنهادات</h1>
-          <p class="text-gray-300 mt-1">پارکینگ مرکزی</p>
+          <h1 class="text-3xl font-bold text-white" data-i18n="feedback_title">نظریات و پیشنهادات</h1>
+          <p class="text-gray-300 mt-1" data-i18n="company_name">پارکینگ هرات</p>
         </div>
       </div>
-      <div class="text-left">
-        <p class="text-sm text-gray-300">تاریخ</p>
-        <p id="current-date" class="text-lg font-bold text-white"></p>
+      <div class="flex items-center gap-4">
+        <!-- Language Toggle Button -->
+        <div class="relative">
+          <button id="language-toggle" class="w-10 h-10 rounded-full bg-white bg-opacity-20 flex items-center justify-center cursor-pointer hover:bg-opacity-30 transition-all duration-200 text-xl" onclick="toggleLanguageDropdown()" data-i18n-title="select_language" title="انتخاب زبان">
+            <span id="language-icon">🌐</span>
+          </button>
+          <div id="language-dropdown" class="absolute hidden z-50 w-48 bg-white rounded-lg shadow-lg top-12 left-0">
+            <div class="py-2">
+              <button onclick="setLanguage('fa'); toggleLanguageDropdown();" class="w-full text-right px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2">
+                <span class="text-xl">🇦🇫</span>
+                <span>فارسی</span>
+              </button>
+              <button onclick="setLanguage('en'); toggleLanguageDropdown();" class="w-full text-right px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2">
+                <span class="text-xl">🇺🇸</span>
+                <span>English</span>
+              </button>
+              <button onclick="setLanguage('ps'); toggleLanguageDropdown();" class="w-full text-right px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2">
+                <span class="text-xl">🇦🇫</span>
+                <span>پښتو</span>
+              </button>
+            </div>
+          </div>
+        </div>
+        <div class="text-left">
+          <p class="text-sm text-gray-300" data-i18n="date">تاریخ</p>
+          <p id="current-date" class="text-lg font-bold text-white"></p>
+        </div>
       </div>
     </div>
   </div>
 
   <div class="card p-6">
     <div class="flex items-center justify-between mb-6">
-      <button class="btn btn-secondary" onclick="navigateTo('./request-menu.html')">← بازگشت به منوی درخواست</button>
+      <button class="btn btn-secondary" onclick="navigateTo('./request-menu.html')">← <span data-i18n="back_to_request_menu">بازگشت به منوی درخواست</span></button>
     </div>
 
-    <h3 class="text-xl font-bold mb-6 text-center">نوع گزارش را انتخاب کنید</h3>
+    <h3 class="text-xl font-bold mb-6 text-center" data-i18n="select_report_type">نوع گزارش را انتخاب کنید</h3>
     <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
       <div onclick="startNewReport('پیشنهاد')" class="card p-6 text-center cursor-pointer hover:bg-emerald-900/30 border border-emerald-500/30 rounded-xl">
         <div class="text-5xl mb-3">💡</div>
-        <h3 class="font-bold text-lg">پیشنهاد</h3>
-        <p class="text-sm text-gray-200 mt-1">ایده یا پیشنهاد برای بهبود سیستم</p>
+        <h3 class="font-bold text-lg" data-i18n="suggestion">پیشنهاد</h3>
+        <p class="text-sm text-gray-200 mt-1" data-i18n="suggestion_desc">ایده یا پیشنهاد برای بهبود سیستم</p>
       </div>
       <div onclick="startNewReport('نظریه')" class="card p-6 text-center cursor-pointer hover:bg-amber-900/30 border border-amber-500/30 rounded-xl">
         <div class="text-5xl mb-3">🗣️</div>
-        <h3 class="font-bold text-lg">نظریه / مشکلات</h3>
-        <p class="text-sm text-gray-200 mt-1">ثبت مشکلات موتور سکیل ها</p>
+        <h3 class="font-bold text-lg" data-i18n="opinion_issues">نظریه / مشکلات</h3>
+        <p class="text-sm text-gray-200 mt-1" data-i18n="opinion_issues_desc">ثبت مشکلات موتور سکیل ها</p>
       </div>
     </div>
   </div>
@@ -64,7 +89,7 @@
 <!-- فرم ثبت گزارش -->
 <div id="new-feedback-modal" class="modal">
   <div class="modal-content">
-    <h2 id="modal-title" class="text-2xl font-bold mb-6">ثبت گزارش جدید</h2>
+    <h2 id="modal-title" class="text-2xl font-bold mb-6" data-i18n="submit_new_report">ثبت گزارش جدید</h2>
     
     <div class="mb-6 p-5 bg-gradient-to-r from-gray-800 to-gray-900 rounded-xl border border-gray-700 shadow-lg">
       <div class="flex flex-wrap items-center gap-6">
@@ -73,7 +98,7 @@
             <span class="text-white text-lg">👤</span>
           </div>
           <div>
-            <p class="text-xs text-gray-400 mb-0.5">نام و نام خانوادگی</p>
+            <p class="text-xs text-gray-400 mb-0.5" data-i18n="full_name">نام و نام خانوادگی</p>
             <p id="reporter-name" class="text-white font-bold text-base"></p>
           </div>
         </div>
@@ -83,7 +108,7 @@
             <span class="text-white text-lg">🏢</span>
           </div>
           <div>
-            <p class="text-xs text-gray-400 mb-0.5">دیپارتمنت</p>
+            <p class="text-xs text-gray-400 mb-0.5" data-i18n="department">دیپارتمنت</p>
             <p id="reporter-dept" class="text-white font-bold text-base"></p>
           </div>
         </div>
@@ -97,7 +122,7 @@
         <label class="block text-sm font-semibold mb-2 text-gray-300">
           <span class="flex items-center gap-2">
             <span class="text-lg">🏍️</span>
-            انتخاب موتور سکیل
+            <span data-i18n="select_motorcycle">انتخاب موتور سکیل</span>
           </span>
         </label>
         <div class="relative">
@@ -108,13 +133,13 @@
       </div>
 
       <div class="mb-4">
-        <label class="block text-sm font-semibold mb-2" id="content-label">متن پیشنهاد / نظریه</label>
-        <textarea id="feedback-content" class="input-field w-full h-40 resize-y text-gray-700" placeholder="لطفاً نظر خود را بنویسید..." required></textarea>
+        <label class="block text-sm font-semibold mb-2" id="content-label" data-i18n="feedback_content_label">متن پیشنهاد / نظریه</label>
+        <textarea id="feedback-content" class="input-field w-full h-40 resize-y text-gray-700" data-i18n-placeholder="feedback_placeholder" placeholder="لطفاً نظر خود را بنویسید..." required></textarea>
       </div>
 
       <div class="flex gap-3">
-        <button type="submit" class="btn btn-success flex-1">ثبت گزارش</button>
-        <button type="button" onclick="closeModal('new-feedback-modal')" class="btn btn-secondary flex-1">انصراف</button>
+        <button type="submit" class="btn btn-success flex-1">✅ <span data-i18n="submit_report">ثبت گزارش</span></button>
+        <button type="button" onclick="closeModal('new-feedback-modal')" class="btn btn-secondary flex-1">❌ <span data-i18n="cancel">انصراف</span></button>
       </div>
     </form>
   </div>
@@ -123,11 +148,25 @@
 <!-- Toast Notification -->
 <div id="toast" class="toast">
   <span id="toast-icon" class="text-2xl">✅</span>
-  <span id="toast-message" class="font-medium text-gray-800 mt-2">پیام موفقیت</span>
+  <span id="toast-message" class="font-medium text-gray-800 mt-2" data-i18n="success_message">پیام موفقیت</span>
 </div>
 
 <script src="./googleSheets.js"></script>
 <script src="./index.js"></script>
-<script src="./feedback.js"></script> 
+<script src="./feedback.js"></script>
+<script>
+  // Make sure translations are applied after page load
+  window.addEventListener('load', function() {
+    // Get saved language
+    const savedLang = localStorage.getItem('language') || 'fa';
+    
+    // Apply initial translations
+    if (typeof applyTranslations === 'function') {
+      applyTranslations();
+    }
+    
+    console.log('Feedback page loaded, language:', savedLang);
+  });
+</script>
 </body>
 </html>

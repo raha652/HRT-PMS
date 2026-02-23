@@ -3,9 +3,10 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>تنظیمات پروفایل - سیستم مدیریت موتورسیکل</title>
+  <title data-i18n="profile_settings">تنظیمات پروفایل - سیستم مدیریت موتورسیکل</title>
   <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
   <link rel="stylesheet" href="./global.css">
+  <script src="./translations.js"></script>
 </head>
 <body class="h-screen">
   <div class="h-screen p-6">
@@ -17,43 +18,65 @@
             👤
           </div>
           <div>
-            <h1 class="text-3xl font-bold text-white">تنظیمات پروفایل</h1>
-            <p class="text-gray-300 mt-1">ویرایش اطلاعات شخصی</p>
+            <h1 class="text-3xl font-bold text-white">👤 <span data-i18n="profile_settings">تنظیمات پروفایل</span></h1>
+            <p class="text-gray-300 mt-1" data-i18n="edit_personal_info">ویرایش اطلاعات شخصی</p>
           </div>
         </div>
-        <div class="flex items-center gap-4">
+        <div class="flex items-center gap-4 relative">
+          <!-- Language Toggle Button -->
+          <div class="relative">
+            <button id="language-toggle" class="w-10 h-10 rounded-full bg-white bg-opacity-20 flex items-center justify-center cursor-pointer hover:bg-opacity-30 transition-all duration-200 text-xl" onclick="toggleLanguageDropdown()" data-i18n-title="select_language" title="انتخاب زبان">
+              <span id="language-icon">🌐</span>
+            </button>
+            <div id="language-dropdown" class="absolute hidden z-50 w-48 bg-white rounded-lg shadow-lg top-12 left-0">
+              <div class="py-2">
+                <button onclick="setLanguage('fa'); toggleLanguageDropdown();" class="w-full text-right px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2">
+                  <span class="text-xl">🇦🇫</span>
+                  <span>فارسی</span>
+                </button>
+                <button onclick="setLanguage('en'); toggleLanguageDropdown();" class="w-full text-right px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2">
+                  <span class="text-xl">🇺🇸</span>
+                  <span>English</span>
+                </button>
+                <button onclick="setLanguage('ps'); toggleLanguageDropdown();" class="w-full text-right px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2">
+                  <span class="text-xl">🇦🇫</span>
+                  <span>پښتو</span>
+                </button>
+              </div>
+            </div>
+          </div>
           <!-- Theme Toggle Button -->
-          <button id="theme-toggle" class="w-10 h-10 rounded-full bg-white bg-opacity-20 flex items-center justify-center cursor-pointer hover:bg-opacity-30 transition-all duration-200 text-xl" onclick="toggleTheme()" title="تغییر تم">
+          <button id="theme-toggle" class="w-10 h-10 rounded-full bg-white bg-opacity-20 flex items-center justify-center cursor-pointer hover:bg-opacity-30 transition-all duration-200 text-xl" onclick="toggleTheme()" data-i18n-title="change_theme" title="تغییر تم">
             <span id="theme-icon">☀️</span>
           </button>
-          <button id="back-btn" class="btn btn-secondary px-4 py-2 rounded">← بازگشت به داشبورد</button>
+          <button id="back-btn" class="btn btn-secondary px-4 py-2 rounded">← <span data-i18n="back_dashboard">بازگشت به داشبورد</span></button>
         </div>
       </div>
     </div>
 
     <!-- Profile Form -->
     <div class="card p-8 max-w-md mx-auto">
-      <h2 class="text-2xl font-bold text-gray-800 mb-6 text-center">ویرایش پروفایل</h2>
+      <h2 class="text-2xl font-bold text-gray-800 mb-6 text-center" data-i18n="edit_profile">ویرایش پروفایل</h2>
       <form id="profile-form" onsubmit="updateProfile(event)">
         <div class="space-y-4">
           <div id="photo-preview" class="w-20 h-20 rounded-full bg-gray-200 mx-auto mb-4 overflow-hidden hidden">
             <img id="preview-img" src="" class="w-full h-full object-cover" alt="Preview">
           </div>
           <div>
-            <label class="block text-sm font-semibold text-gray-700 mb-2">عکس پروفایل</label>
+            <label class="block text-sm font-semibold text-gray-700 mb-2" data-i18n="profile_photo">عکس پروفایل</label>
             <input type="file" id="profile-photo" class="input-field w-full text-gray-600 mb-6 text-center" accept="image/*" onchange="previewPhoto(this)">
           </div>
           <div>
-            <label class="block text-sm font-semibold text-gray-700 mb-2">نام کامل</label>
-            <input type="text" id="profile-fullname" class="input-field w-full text-gray-600 mb-6 text-center" placeholder="نام و نام خانوادگی" required>
+            <label class="block text-sm font-semibold text-gray-700 mb-2" data-i18n="full_name">نام کامل</label>
+            <input type="text" id="profile-fullname" class="input-field w-full text-gray-600 mb-6 text-center" data-i18n-placeholder="enter_full_name" placeholder="نام و نام خانوادگی" required>
           </div>
           <div>
-            <label class="block text-sm font-semibold text-gray-700 mb-2">رمز عبور</label>
-            <input type="text" id="profile-password" class="input-field w-full text-gray-600 mb-6 text-center" placeholder="برای تغییر رمز، رمز جدید را وارد کنید">
+            <label class="block text-sm font-semibold text-gray-700 mb-2" data-i18n="password">رمز عبور</label>
+            <input type="text" id="profile-password" class="input-field w-full text-gray-600 mb-6 text-center" data-i18n-placeholder="enter_new_password" placeholder="برای تغییر رمز، رمز جدید را وارد کنید">
           </div>
           <div class="flex gap-3 mt-6">
-            <button type="submit" class="btn btn-success flex-1">✅ ذخیره تغییرات</button>
-            <button type="button" id="logout-btn" class="btn btn-secondary flex-1">خروج</button>
+            <button type="submit" class="btn btn-success flex-1">✅ <span data-i18n="save_changes">ذخیره تغییرات</span></button>
+            <button type="button" id="logout-btn" class="btn btn-secondary flex-1"><span data-i18n="logout">خروج</span></button>
           </div>
         </div>
       </form>
@@ -62,18 +85,6 @@
     <!-- Toast Notification -->
     <div id="toast" class="toast"><span id="toast-icon">✅</span> <span id="toast-message"></span></div>
   </div>
-
-  <!-- <footer class="absolute bottom-2 left-6 right-6 text-center flex justify-between items-center text-white text-sm border-t border-gray-300">
-    <div class="mt-2">
-      Developed by ShAhAb HaMiDi & <a href="https://github.com/emadrasooli" target="_blank">Emad Rasooli</a>
-    </div>
-    <div>
-      <div class="flex items-center gap-2">
-        <p class="text-white">تاریخ:</p>
-        <p id="current-date" class="text-white text-sm"></p>
-      </div>
-    </div>
-  </footer> -->
 
   <script>
     // Theme Toggle Function
@@ -111,12 +122,27 @@
       // Force a reflow to ensure theme applies
       void body.offsetHeight;
     }
+
+    // Close language dropdown when clicking outside
+    document.addEventListener('click', function(event) {
+      const dropdown = document.getElementById('language-dropdown');
+      const button = document.getElementById('language-toggle');
+      
+      if (dropdown && button && !button.contains(event.target) && !dropdown.contains(event.target)) {
+        dropdown.classList.add('hidden');
+      }
+    });
   </script>
   <script src="./googleSheets.js"></script>
   <script src="./profile-settings.js"></script>
   <script>
     // Load theme on page load
     loadTheme();
+    
+    // Apply translations
+    if (typeof applyTranslations === 'function') {
+      applyTranslations();
+    }
   </script>
   <script>
     // Attach event listeners after scripts are loaded
@@ -149,4 +175,3 @@
   </script>
 </body>
 </html>
-

@@ -23,7 +23,7 @@ async function loadOilData() {
     renderMotorcycles();
   } catch (error) {
     console.error('Error loading data:', error);
-    showToast('خطا در بارگذاری داده‌ها', '❌');
+    showToast(t('data_sync_error'), '❌');
   } finally {
     hideLoading();
   }
@@ -37,7 +37,7 @@ function renderMotorcycles() {
     container.innerHTML = `
       <div class="col-span-full text-center py-12 text-gray-400">
         <div class="text-6xl mb-4">🏍️</div>
-        <p class="text-lg">هیچ موتور سکیلی ثبت نشده است</p>
+        <p class="text-lg">${t('no_motorcycles_found')}</p>
       </div>
     `;
     return;
@@ -59,8 +59,8 @@ function renderMotorcycles() {
           </div>
         </div>
         <div class="flex items-center justify-between text-sm">
-          <span class="text-white">🔢 پلاک: ${moto.motorcyclePlate}</span>
-          <span class="bg-amber-900/50 text-amber-300 px-2 py-1 rounded">🛢️ ${totalOil.toFixed(1)} لیتر</span>
+          <span class="text-white">🔢 ${t('plate')}: ${moto.motorcyclePlate}</span>
+          <span class="bg-amber-900/50 text-amber-300 px-2 py-1 rounded">🛢️ ${totalOil.toFixed(1)} ${t('liters')}</span>
         </div>
       </div>
     `;
@@ -70,9 +70,9 @@ function renderMotorcycles() {
 // باز کردن مودال ثبت گزارش
 function openOilReportModal() {
   const user = window.currentUser || {};
-  document.getElementById('oil-reporter-name').value = user.fullName || 'نامشخص';
-  document.getElementById('oil-reporter-dept').value = user.department || 'نامشخص';
-  document.getElementById('selected-motorcycle-display').textContent = 'انتخاب کنید';
+  document.getElementById('oil-reporter-name').value = user.fullName || t('unknown');
+  document.getElementById('oil-reporter-dept').value = user.department || t('unknown');
+  document.getElementById('selected-motorcycle-display').textContent = t('select');
   document.getElementById('selected-motorcycle-id').value = '';
   document.getElementById('oil-amount').value = '';
   selectedMotorcycle = null;
@@ -97,14 +97,14 @@ function populateMotorcycleOptions() {
   }
   
   if (filtered.length === 0) {
-    container.innerHTML = '<div class="p-3 text-center text-gray-400">موتور سکیلی یافت نشد</div>';
+    container.innerHTML = `<div class="p-3 text-center text-gray-400">${t('motorcycle_not_found')}</div>`;
     return;
   }
   
   container.innerHTML = filtered.map(m => `
     <div class="p-3 hover:bg-gray-700 cursor-pointer border-b border-gray-700 last:border-b-0" onclick="selectMotorcycle('${m.__backendId}')">
       <div class="font-semibold">${m.motorcycleName}</div>
-      <div class="text-sm text-gray-400">${m.motorcycleColor} | ${m.motorcycleDepartment} | پلاک: ${m.motorcyclePlate}</div>
+      <div class="text-sm text-gray-400">${m.motorcycleColor} | ${m.motorcycleDepartment} | ${t('plate')}: ${m.motorcyclePlate}</div>
     </div>
   `).join('');
 }
@@ -146,13 +146,13 @@ async function submitOilReport(e) {
   e.preventDefault();
   
   if (!selectedMotorcycle) {
-    showToast('لطفاً موتور سکیل را انتخاب کنید', '⚠️');
+    showToast(t('select_motorcycle_warning'), '⚠️');
     return;
   }
   
   const oilAmount = parseFloat(document.getElementById('oil-amount').value);
   if (isNaN(oilAmount) || oilAmount <= 0) {
-    showToast('لطفاً مقدار معتبر وارد کنید', '⚠️');
+    showToast(t('fill_all_fields'), '⚠️');
     return;
   }
   
@@ -169,8 +169,8 @@ async function submitOilReport(e) {
     motorcycleDepartment: selectedMotorcycle.motorcycleDepartment,
     motorcyclePlate: selectedMotorcycle.motorcyclePlate,
     oilAmount: oilAmount,
-    reporterName: user.fullName || 'نامشخص',
-    reporterDept: user.department || 'نامشخص',
+    reporterName: user.fullName || t('unknown'),
+    reporterDept: user.department || t('unknown'),
     date: dateStr,
     time: timeStr
   };
@@ -179,12 +179,12 @@ async function submitOilReport(e) {
   const result = await callGoogleSheets('create', 'oil', gsData);
   
   if (result.success) {
-    showToast('گزارش موبلایل با موفقیت ثبت شد', '✅');
+    showToast(t('report_registered'), '✅');
     closeModal('oil-report-modal');
     allOilReports.push(reportData);
     renderMotorcycles();
   } else {
-    showToast('خطا در ثبت گزارش', '❌');
+    showToast(t('report_error'), '❌');
   }
 }
 
@@ -223,7 +223,7 @@ function showMotorcycleReports(motorcycleId) {
   const reports = allOilReports.filter(r => r.motorcycleId === motorcycleId);
   
   document.getElementById('reports-modal-title').textContent = 
-    `گزارشات موبلایل - ${moto.motorcycleName} (${moto.motorcycleDepartment})`;
+    `${t('oil_reports')} - ${moto.motorcycleName} (${moto.motorcycleDepartment})`;
   
   const container = document.getElementById('motorcycle-reports-list');
   
@@ -231,7 +231,7 @@ function showMotorcycleReports(motorcycleId) {
     container.innerHTML = `
       <div class="text-center py-8 text-gray-400">
         <div class="text-4xl mb-2">🛢️</div>
-        <p>هیچ گزارشی برای این موتور سکیل ثبت نشده است</p>
+        <p>${t('no_oil_reports')}</p>
       </div>
     `;
   } else {
@@ -240,7 +240,7 @@ function showMotorcycleReports(motorcycleId) {
       return `
         <div class="bg-gray-800 rounded-lg p-4">
           <div class="flex items-center justify-between mb-2">
-            <span class="bg-amber-900/50 text-amber-300 px-2 py-1 rounded text-sm">🛢️ ${r.oilAmount} لیتر</span>
+            <span class="bg-amber-900/50 text-amber-300 px-2 py-1 rounded text-sm">🛢️ ${r.oilAmount} ${t('liters')}</span>
             <span class="text-xs text-gray-400">${formattedDate}${formattedTime ? ' - ' + formattedTime : ''}</span>
           </div>
           <div class="text-sm text-gray-300">

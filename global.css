@@ -386,6 +386,35 @@ body {
   }
 }
 
+/* Header section overflow visible for dropdowns */
+#header-section {
+  overflow: visible !important;
+  position: relative;
+  z-index: 100;
+}
+
+/* Language dropdown above all elements */
+#language-dropdown {
+  z-index: 9999 !important;
+}
+
+/* User dropdown above all elements */
+#user-dropdown {
+  z-index: 9999 !important;
+}
+
+/* Language dropdown direction for LTR (English) */
+html[dir="ltr"] #language-dropdown {
+  left: auto !important;
+  right: 0 !important;
+}
+
+/* User dropdown direction for LTR (English) */
+html[dir="ltr"] #user-dropdown {
+  left: auto !important;
+  right: 0 !important;
+}
+
 .stat-card {
   background: linear-gradient(145deg, rgba(255, 255, 255, 0.2) 0%, rgba(255, 255, 255, 0.1) 100%);
   color: #ffffff;
@@ -729,3 +758,4 @@ body {
   width: 120px;
   height: auto;
 }
+/* h */

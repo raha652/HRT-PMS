@@ -3,9 +3,10 @@
  <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>مدیریت کارمندان - سیستم مدیریت موتور سکیل ها</title>
+  <title data-i18n="employees_page_title">مدیریت کارمندان - سیستم مدیریت موتور سکیل ها</title>
   <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
   <link rel="stylesheet" href="./global.css">
+  <script src="./translations.js"></script>
  </head>
  <body class="h-screen">
 <div id="loading-overlay" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.65); z-index: 9999; justify-content: center; align-items: center; flex-direction: column; color: white; font-size: 1rem;">
@@ -19,7 +20,7 @@
     <div class="smoke smoke2">🌫️</div>
   </div>
   
-  <p style="margin: 10px 0 0; font-weight: bold; text-shadow: 0 0 10px rgba(255,255,255,0.5);">
+  <p style="margin: 10px 0 0; font-weight: bold; text-shadow: 0 0 10px rgba(255,255,255,0.5);" data-i18n="loading">
     در حال بارگذاری...
   </p>
 </div>
@@ -32,22 +33,46 @@
        🏍️
       </div>
       <div>
-       <h1 id="dashboard-title" class="text-3xl font-bold text-white">سیستم مدیریت موتور سکیل ها</h1>
-       <p id="company-name" class="text-gray-300 mt-1">پارکینگ مرکزی</p>
+       <h1 id="dashboard-title" class="text-3xl font-bold text-white" data-i18n="dashboard_title">سیستم مدیریت موتور سکیل ها</h1>
+       <p id="company-name" class="text-gray-300 mt-1" data-i18n="company_name">پارکینگ هرات</p>
       </div>
      </div>
-     <div class="text-left">
-      <p class="text-sm text-gray-300">تاریخ</p>
-      <p id="current-date" class="text-lg font-bold text-white"></p>
+     <div class="flex items-center gap-4">
+      <!-- Language Toggle Button -->
+      <div class="relative">
+        <button id="language-toggle" class="w-10 h-10 rounded-full bg-white bg-opacity-20 flex items-center justify-center cursor-pointer hover:bg-opacity-30 transition-all duration-200 text-xl" onclick="toggleLanguageDropdown()" title="انتخاب زبان">
+          <span id="language-icon">🌐</span>
+        </button>
+        <div id="language-dropdown" class="absolute hidden z-50 w-48 bg-white rounded-lg shadow-lg top-12 left-0">
+          <div class="py-2">
+            <button onclick="setLanguage('fa'); toggleLanguageDropdown();" class="w-full text-right px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2">
+              <span class="text-xl">🇮🇷</span>
+              <span>فارسی</span>
+            </button>
+            <button onclick="setLanguage('en'); toggleLanguageDropdown();" class="w-full text-right px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2">
+              <span class="text-xl">🇺🇸</span>
+              <span>English</span>
+            </button>
+            <button onclick="setLanguage('ps'); toggleLanguageDropdown();" class="w-full text-right px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2">
+              <span class="text-xl">🇦🇫</span>
+              <span>پښتو</span>
+            </button>
+          </div>
+        </div>
+      </div>
+      <div class="text-left">
+        <p class="text-sm text-gray-300" data-i18n="date">تاریخ</p>
+        <p id="current-date" class="text-lg font-bold text-white"></p>
+      </div>
      </div>
     </div>
    </div>
    <div id="employees-page">
     <div class="card p-6">
      <div class="flex items-center justify-between mb-6">
-      <div class="flex items-center gap-4"><button class="btn btn-secondary" onclick="navigateTo('./management.html')"> ← بازگشت به مدیریت </button>
-       <h2 class="text-2xl font-bold text-white">مدیریت کارمندان</h2>
-      </div><button class="btn btn-primary" onclick="openNewEmployeeModal()"> ➕ افزودن کارمند </button>
+      <div class="flex items-center gap-4"><button class="btn btn-secondary" onclick="navigateTo('./management.html')"> ← <span data-i18n="back_to_management">بازگشت به مدیریت</span> </button>
+       <h2 class="text-2xl font-bold text-white" data-i18n="employees_management">مدیریت کارمندان</h2>
+      </div><button class="btn btn-primary" onclick="openNewEmployeeModal()"> ➕ <span data-i18n="add_new_employee">افزودن کارمند</span> </button>
      </div>
      <div id="employees-list" class="space-y-4"></div>
     </div>
@@ -131,18 +156,18 @@
   </div>
   <div id="new-employee-modal" class="modal">
    <div class="modal-content">
-    <h2 class="text-2xl font-bold text-gray-100 mb-6">افزودن کارمند جدید</h2>
+    <h2 class="text-2xl font-bold text-gray-100 mb-6" data-i18n="add_employee">افزودن کارمند جدید</h2>
     <form id="new-employee-form" onsubmit="submitNewEmployee(event)">
      <div class="space-y-4">
-      <div><label class="block text-sm font-semibold text-gray-100 mb-2">نام و نام خانوادگی</label> <input type="text" id="employee-name" class="input-field text-gray-800 mb-2" placeholder="مثال: شهاب حمیدی" required>
+      <div><label class="block text-sm font-semibold text-gray-100 mb-2" data-i18n="employee_name">نام و نام خانوادگی</label> <input type="text" id="employee-name" class="input-field text-gray-800 mb-2" data-i18n-placeholder="example_employee_name" placeholder="مثال: شهاب حمیدی" required>
       </div>
-      <div><label class="block text-sm font-semibold text-gray-100 mb-2">آیدی</label> <input type="text" id="employee-id" class="input-field text-gray-800 mb-2" placeholder="مثال: 1806" required>
+      <div><label class="block text-sm font-semibold text-gray-100 mb-2" data-i18n="employee_id">آیدی</label> <input type="text" id="employee-id" class="input-field text-gray-800 mb-2" placeholder="مثال: 1806" required>
       </div>
-      <div><label class="block text-sm font-semibold text-gray-100 mb-2">دیپارتمنت</label> <input type="text" id="employee-department" class="input-field text-gray-800 mb-2" placeholder="مثال: پاور " required>
+      <div><label class="block text-sm font-semibold text-gray-100 mb-2" data-i18n="department">دیپارتمنت</label> <input type="text" id="employee-department" class="input-field text-gray-800 mb-2" data-i18n-placeholder="example_department" placeholder="مثال: پاور " required>
       </div>
-      <div><label class="block text-sm font-semibold text-gray-100 mb-2">شناسه اثر انگشت</label> <input type="text" id="employee-fingerprint" class="input-field text-gray-800 mb-2" placeholder="مثال: SH001" required>
+      <div><label class="block text-sm font-semibold text-gray-100 mb-2" data-i18n="employee_fingerprint">شناسه اثر انگشت</label> <input type="text" id="employee-fingerprint" class="input-field text-gray-800 mb-2" data-i18n-placeholder="example_fingerprint" placeholder="مثال: SH001" required>
       </div>
-      <div class="flex gap-3 mt-6"><button type="submit" class="btn btn-success flex-1">✅ ذخیره</button> <button type="button" class="btn btn-secondary flex-1" onclick="closeModal('new-employee-modal')">❌ انصراف</button>
+      <div class="flex gap-3 mt-6"><button type="submit" class="btn btn-success flex-1">✅ <span data-i18n="save">ذخیره</span></button> <button type="button" class="btn btn-secondary flex-1" onclick="closeModal('new-employee-modal')">❌ <span data-i18n="cancel">انصراف</span></button>
       </div>
      </div>
     </form>
@@ -150,18 +175,18 @@
   </div>
   <div id="edit-employee-modal" class="modal">
    <div class="modal-content">
-    <h2 class="text-2xl font-bold text-gray-100 mb-6">ویرایش کارمند</h2>
+    <h2 class="text-2xl font-bold text-gray-100 mb-6" data-i18n="edit_employee">ویرایش کارمند</h2>
     <form id="edit-employee-form" onsubmit="submitEditEmployee(event)">
      <div class="space-y-4">
-      <div><label class="block text-sm font-semibold text-gray-100 mb-2">نام و نام خانوادگی</label> <input type="text" id="edit-employee-name" class="input-field text-gray-800 mb-2" placeholder="مثال: شهاب حمیدی" required>
+      <div><label class="block text-sm font-semibold text-gray-100 mb-2" data-i18n="employee_name">نام و نام خانوادگی</label> <input type="text" id="edit-employee-name" class="input-field text-gray-800 mb-2" data-i18n-placeholder="example_employee_name" placeholder="مثال: شهاب حمیدی" required>
       </div>
-      <div><label class="block text-sm font-semibold text-gray-100 mb-2">آیدی</label> <input type="text" id="edit-employee-id" class="input-field text-gray-800 mb-2" placeholder="مثال: 1806" required>
+      <div><label class="block text-sm font-semibold text-gray-100 mb-2" data-i18n="employee_id">آیدی</label> <input type="text" id="edit-employee-id" class="input-field text-gray-800 mb-2" placeholder="مثال: 1806" required>
       </div>
-      <div><label class="block text-sm font-semibold text-gray-100 mb-2">دیپارتمنت</label> <input type="text" id="edit-employee-department" class="input-field text-gray-800 mb-2" placeholder="مثال: پاور" required>
+      <div><label class="block text-sm font-semibold text-gray-100 mb-2" data-i18n="department">دیپارتمنت</label> <input type="text" id="edit-employee-department" class="input-field text-gray-800 mb-2" data-i18n-placeholder="example_department" placeholder="مثال: پاور" required>
       </div>
-      <div><label class="block text-sm font-semibold text-gray-100 mb-2">شناسه اثر انگشت</label> <input type="text" id="edit-employee-fingerprint" class="input-field text-gray-800 mb-2" placeholder="مثال: SH001" required>
+      <div><label class="block text-sm font-semibold text-gray-100 mb-2" data-i18n="employee_fingerprint">شناسه اثر انگشت</label> <input type="text" id="edit-employee-fingerprint" class="input-field text-gray-800 mb-2" data-i18n-placeholder="example_fingerprint" placeholder="مثال: SH001" required>
       </div>
-      <div class="flex gap-3 mt-6"><button type="submit" class="btn btn-success flex-1">✅ ذخیره تغییرات</button> <button type="button" class="btn btn-secondary flex-1" onclick="closeModal('edit-employee-modal')">❌ انصراف</button>
+      <div class="flex gap-3 mt-6"><button type="submit" class="btn btn-success flex-1">✅ <span data-i18n="save_changes">ذخیره تغییرات</span></button> <button type="button" class="btn btn-secondary flex-1" onclick="closeModal('edit-employee-modal')">❌ <span data-i18n="cancel">انصراف</span></button>
       </div>
      </div>
     </form>

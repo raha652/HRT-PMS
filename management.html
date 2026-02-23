@@ -3,9 +3,10 @@
  <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>مدیریت - سیستم مدیریت موتور سکیل ها</title>
+  <title data-i18n="management_page_title">مدیریت - سیستم مدیریت موتور سکیل ها</title>
   <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
   <link rel="stylesheet" href="./global.css">
+  <script src="./translations.js"></script>
  </head>
  <body class="h-screen">
     <div class="h-screen p-6">
@@ -16,20 +17,44 @@
        🏍️
       </div>
       <div>
-       <h1 id="dashboard-title" class="text-3xl font-bold text-white">سیستم مدیریت موتور سکیل ها</h1>
-       <p id="company-name" class="text-gray-300 mt-1">پارکینگ مرکزی</p>
+       <h1 id="dashboard-title" class="text-3xl font-bold text-white" data-i18n="dashboard_title">سیستم مدیریت موتور سکیل ها</h1>
+       <p id="company-name" class="text-gray-300 mt-1" data-i18n="company_name">پارکینگ هرات</p>
       </div>
      </div>
-     <div class="text-left">
-      <p class="text-sm text-gray-300">تاریخ</p>
-      <p id="current-date" class="text-lg font-bold text-white"></p>
+     <div class="flex items-center gap-4">
+      <!-- Language Toggle Button -->
+      <div class="relative">
+        <button id="language-toggle" class="w-10 h-10 rounded-full bg-white bg-opacity-20 flex items-center justify-center cursor-pointer hover:bg-opacity-30 transition-all duration-200 text-xl" onclick="toggleLanguageDropdown()" title="انتخاب زبان">
+          <span id="language-icon">🌐</span>
+        </button>
+        <div id="language-dropdown" class="absolute hidden z-50 w-48 bg-white rounded-lg shadow-lg top-12 left-0">
+          <div class="py-2">
+            <button onclick="setLanguage('fa'); toggleLanguageDropdown();" class="w-full text-right px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2">
+              <span class="text-xl">🇦🇫</span>
+              <span>فارسی</span>
+            </button>
+            <button onclick="setLanguage('en'); toggleLanguageDropdown();" class="w-full text-right px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2">
+              <span class="text-xl">🇺🇸</span>
+              <span>English</span>
+            </button>
+            <button onclick="setLanguage('ps'); toggleLanguageDropdown();" class="w-full text-right px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2">
+              <span class="text-xl">🇦🇫</span>
+              <span>پښتو</span>
+            </button>
+          </div>
+        </div>
+      </div>
+      <div class="text-left">
+        <p class="text-sm text-gray-300" data-i18n="date">تاریخ</p>
+        <p id="current-date" class="text-lg font-bold text-white"></p>
+      </div>
      </div>
     </div>
    </div>
    <div id="management-page">
     <div class="card p-6 mb-6">
-     <div class="flex items-center justify-between mb-6"><button class="btn btn-secondary" onclick="navigateTo('./index.html')"> ← بازگشت به داشبورد </button>
-      <h2 class="text-2xl font-bold text-white">پنل مدیریت</h2>
+     <div class="flex items-center justify-between mb-6"><button class="btn btn-secondary" onclick="navigateTo('./index.html')"> ← <span data-i18n="back_dashboard">بازگشت به داشبورد</span> </button>
+      <h2 class="text-2xl font-bold text-white" data-i18n="management_panel">پنل مدیریت</h2>
      </div>
      <div class="grid grid-cols-1 md:grid-cols-5 gap-6">
       <div class="card p-8 cursor-pointer hover:scale-105 transition-all duration-300" onclick="navigateTo('./motorcycles.html')">
@@ -37,8 +62,8 @@
         <div class="text-6xl mb-4">
          🏍️
         </div>
-        <h3 class="text-xl font-bold text-white mb-2">موتور سکیل‌ها</h3>
-        <p class="text-gray-300 text-sm">اضافه کردن موتور سکیل جدید</p>
+        <h3 class="text-xl font-bold text-white mb-2" data-i18n="motorcycles">موتور سکیل‌ها</h3>
+        <p class="text-gray-300 text-sm" data-i18n="add_new_motorcycle">اضافه کردن موتور سکیل جدید</p>
        </div>
       </div>
       <div class="card p-8 cursor-pointer hover:scale-105 transition-all duration-300" onclick="navigateTo('./fuel-consumption.html')">
@@ -46,8 +71,8 @@
         <div class="text-6xl mb-4 w-20 h-20">
          <image src="./icons/money-wings.svg" />
         </div>
-        <h3 class="text-xl font-bold text-white mb-2">مصارف موتور سکیل ها</h3>
-        <p class="text-gray-300 text-sm">مدیریت مصارف و استفاده</p>
+        <h3 class="text-xl font-bold text-white mb-2" data-i18n="motorcycle_expenses">مصارف موتور سکیل ها</h3>
+        <p class="text-gray-300 text-sm" data-i18n="manage_expenses">مدیریت مصارف و استفاده</p>
        </div>
       </div>
       <div class="card p-8 cursor-pointer hover:scale-105 transition-all duration-300" onclick="navigateTo('./employees.html')">
@@ -55,8 +80,8 @@
         <div class="text-6xl mb-4">
          👥
         </div>
-        <h3 class="text-xl font-bold text-white mb-2">کارمندان</h3>
-        <p class="text-gray-300 text-sm">اضافه کردن کارمند جدید</p>
+        <h3 class="text-xl font-bold text-white mb-2" data-i18n="employees">کارمندان</h3>
+        <p class="text-gray-300 text-sm" data-i18n="add_new_employee">اضافه کردن کارمند جدید</p>
        </div>
       </div>
       <div class="card p-8 cursor-pointer hover:scale-105 transition-all duration-300" onclick="navigateTo('./history.html')">
@@ -64,8 +89,8 @@
         <div class="text-6xl mb-4">
          📊
         </div>
-        <h3 class="text-xl font-bold text-white mb-2">تاریخچه</h3>
-        <p class="text-gray-300 text-sm">گزارش ورود و خروج</p>
+        <h3 class="text-xl font-bold text-white mb-2" data-i18n="history">تاریخچه</h3>
+        <p class="text-gray-300 text-sm" data-i18n="entry_exit_report">گزارش ورود و خروج</p>
        </div>
       </div>
       <div class="card p-8 cursor-pointer hover:scale-105 transition-all duration-300" onclick="navigateTo('./accounts.html')">
@@ -73,8 +98,8 @@
         <div class="text-6xl mb-4">
          👤
         </div>
-        <h3 class="text-xl font-bold text-white mb-2">ساخت اکانت</h3>
-        <p class="text-gray-300 text-sm">مدیریت کاربران و نقش‌ها</p>
+        <h3 class="text-xl font-bold text-white mb-2" data-i18n="create_account">ساخت اکانت</h3>
+        <p class="text-gray-300 text-sm" data-i18n="users_roles_management">مدیریت کاربران و نقش‌ها</p>
        </div>
       </div>
      </div>
