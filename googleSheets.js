@@ -1,4 +1,4 @@
-const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbx_6LDrzohIdmnPNchrsTeOGtfOpae1S82LyBVOaHrfYTVjvS0UBpmYveTOCG9xBYpM/exec';
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwXiVJSkSTe_ROXHfEJo7TjNSCH5bth1iismidcwSYc8kI0kQPA0LxeBykg3VY981OW/exec';
 async function callGoogleSheets(action, sheetName, data = null) {
   try {
     const params = new URLSearchParams({
@@ -493,3 +493,4 @@ async function syncAlarmsWithGoogleSheets() {
     return [];
   }
 }
+
