@@ -35,6 +35,8 @@ let requestedEmployeeIds = [];
 let currentFuelReports = [];
 let fuelReportSearchDate = '';
 let usageSearchTerm = '';
+let syncLock = false; // Lock to prevent sync during critical updates
+let recentlyUpdatedIds = new Set(); // Track recently updated item IDs
 let currentUsageSort = 'none';
 let currentSortDisplay = 'هیچکدام';
 let currentUsageDeptFilter = 'all';
@@ -102,7 +104,7 @@ JalaliDate.jalaliToGregorian = function (j_y, j_m, j_d) {
   gd = gd < 10 ? "0" + gd : gd;
   return [gy, gm, gd];
 };
-const dataStorageKey = `motorcycleManagementData_${defaultConfig.company_name}`;
+const dataStorageKey = 'motorcycleManagementData_${defaultConfig.company_name}';
 const usersStorageKey = 'userAccountsData';
 function generateId() {
   return Date.now().toString() + Math.random().toString(36).substr(2, 9);
@@ -254,7 +256,9 @@ function openEditAccountModal(userId, username, fullName, password, role, positi
   document.getElementById('edit-account-password').value = password;
   document.getElementById('edit-account-role').value = role;
   document.getElementById('edit-account-position').value = position;
-  document.getElementById('edit-account-department').value = department;
+  
+  // Populate department input fields with existing selection
+  populateDepartmentFields('edit-department-fields-container', department);
 
   // Parse custom displays
   const displays = customDisplays ? customDisplays.split(',') : [];
@@ -272,7 +276,9 @@ async function submitEditAccount(event) {
   const password = document.getElementById('edit-account-password').value;
   const role = document.getElementById('edit-account-role').value;
   const position = document.getElementById('edit-account-position').value.trim();
-  const department = document.getElementById('edit-account-department').value.trim();
+  
+  // Get departments from text input fields
+  const department = getDepartmentValues('edit-department-fields-container');
 
   // Get custom displays
   const showMaintenance = document.getElementById('edit-account-show-maintenance').checked;
@@ -282,7 +288,7 @@ async function submitEditAccount(event) {
   if (showNotifications) customDisplays.push('اعلانات');
 
   if (!fullName || !username || !password || !role || !position || !department) {
-    showToast('لطفاً همه فیلدها را پر کنید', '⚠️');
+    showToast('لطفاً همه فیلدها را پر کنید (حداقل یک دیپارتمنت وارد کنید)', '⚠️');
     return;
   }
   const updatedData = { fullName, username, password, role, position, department, customDisplays: customDisplays.join(',') };
@@ -464,8 +470,15 @@ window.dataSdk = {
   }
 };
 function updateDepartments() {
-  const uniqueDepartments = [...new Set(allData.filter(d => d.type === 'motorcycle').map(d => d.motorcycleDepartment))];
-  departments = uniqueDepartments.sort();
+  // Handle comma-separated departments
+  const allDepts = [];
+  allData.filter(d => d.type === 'motorcycle').forEach(m => {
+    if (m.motorcycleDepartment) {
+      const depts = m.motorcycleDepartment.split(',').map(d => d.trim()).filter(d => d);
+      allDepts.push(...depts);
+    }
+  });
+  departments = [...new Set(allDepts)].sort();
 }
 const passwords = {
   management: '456',
@@ -858,7 +871,98 @@ function openNewAccountModal() {
     return;
   }
   document.getElementById('new-account-form').reset();
+  // Reset department fields to have only one empty field
+  resetDepartmentFields('department-fields-container');
   document.getElementById('new-account-modal').classList.add('active');
+}
+
+// Function to add a new department input field
+function addDepartmentField(containerId) {
+  const container = document.getElementById(containerId);
+  if (!container) return;
+  
+  const newRow = document.createElement('div');
+  newRow.className = 'flex items-center gap-2 department-field-row';
+  newRow.innerHTML = `
+    <input type="text" class="input-field text-gray-800 flex-1 department-input" data-i18n-placeholder="department" placeholder="مثال: پاور">
+    <button type="button" class="w-10 h-10 bg-red-500 hover:bg-red-600 text-white rounded-lg flex items-center justify-center text-xl font-bold shrink-0" onclick="removeDepartmentField(this)">−</button>
+  `;
+  container.appendChild(newRow);
+}
+
+// Function to remove a department input field
+function removeDepartmentField(button) {
+  const row = button.closest('.department-field-row');
+  if (row) {
+    row.remove();
+  }
+}
+
+// Function to reset department fields to initial state (one empty field)
+function resetDepartmentFields(containerId) {
+  const container = document.getElementById(containerId);
+  if (!container) return;
+  
+  container.innerHTML = `
+    <div class="flex items-center gap-2 department-field-row">
+      <input type="text" class="input-field text-gray-800 flex-1 department-input" data-i18n-placeholder="department" placeholder="مثال: پاور">
+      <button type="button" class="w-10 h-10 bg-green-500 hover:bg-green-600 text-white rounded-lg flex items-center justify-center text-xl font-bold shrink-0" onclick="addDepartmentField('${containerId}')">+</button>
+    </div>
+  `;
+}
+
+// Function to get all department values from input fields
+function getDepartmentValues(containerId) {
+  const container = document.getElementById(containerId);
+  if (!container) return '';
+  
+  const inputs = container.querySelectorAll('.department-input');
+  const values = [];
+  
+  inputs.forEach(input => {
+    const value = input.value.trim();
+    if (value) {
+      values.push(value);
+    }
+  });
+  
+  return values.join(',');
+}
+
+// Function to populate department fields from existing values
+function populateDepartmentFields(containerId, departments) {
+  const container = document.getElementById(containerId);
+  if (!container) return;
+  
+  // Clear existing fields
+  container.innerHTML = '';
+  
+  // Split departments by comma
+  const deptArray = departments ? departments.split(',').filter(d => d.trim()) : [];
+  
+  if (deptArray.length === 0) {
+    // Add one empty field if no departments
+    deptArray.push('');
+  }
+  
+  deptArray.forEach((dept, index) => {
+    const newRow = document.createElement('div');
+    newRow.className = 'flex items-center gap-2 department-field-row';
+    
+    if (index === 0) {
+      newRow.innerHTML = `
+        <input type="text" class="input-field text-gray-800 flex-1 department-input" data-i18n-placeholder="department" placeholder="مثال: پاور" value="${dept}">
+        <button type="button" class="w-10 h-10 bg-green-500 hover:bg-green-600 text-white rounded-lg flex items-center justify-center text-xl font-bold shrink-0" onclick="addDepartmentField('${containerId}')">+</button>
+      `;
+    } else {
+      newRow.innerHTML = `
+        <input type="text" class="input-field text-gray-800 flex-1 department-input" data-i18n-placeholder="department" placeholder="مثال: پاور" value="${dept}">
+        <button type="button" class="w-10 h-10 bg-red-500 hover:bg-red-600 text-white rounded-lg flex items-center justify-center text-xl font-bold shrink-0" onclick="removeDepartmentField(this)">−</button>
+      `;
+    }
+    
+    container.appendChild(newRow);
+  });
 }
 async function submitNewAccount(event) {
   event.preventDefault();
@@ -867,7 +971,9 @@ async function submitNewAccount(event) {
   const password = document.getElementById('account-password').value;
   const role = document.getElementById('account-role').value;
   const position = document.getElementById('account-position').value.trim();
-  const department = document.getElementById('account-department').value.trim();
+  
+  // Get departments from text input fields
+  const department = getDepartmentValues('department-fields-container');
 
   // Get custom displays
   const showMaintenance = document.getElementById('account-show-maintenance').checked;
@@ -877,7 +983,7 @@ async function submitNewAccount(event) {
   if (showNotifications) customDisplays.push('اعلانات');
 
   if (!fullName || !username || !password || !role || !position || !department) {
-    showToast('لطفاً همه فیلدها را پر کنید', '⚠️');
+    showToast('لطفاً همه فیلدها را پر کنید (حداقل یک دیپارتمنت وارد کنید)', '⚠️');
     return;
   }
   const result = await createUser({ fullName, username, password, role, position, department, customDisplays: customDisplays.join(',') });
@@ -1143,7 +1249,7 @@ function renderRequests(requests) {
   container.innerHTML = filteredRequests.map(request => {
     let deleteButton = '';
     if (currentUserRole === 'admin') {
-      deleteButton = `<button class="delete-btn" onclick="deleteRequest('${request.__backendId}')">🗑️ حذف</button>`;
+      deleteButton = `<button class="delete-btn" onclick="deleteRequest('${request.__backendId}')">🗑️ ${tm('delete')}</button>`;
     }
     return `
       <div class="card p-6">
@@ -1153,21 +1259,21 @@ function renderRequests(requests) {
               🏍️
             </div>
             <div class="flex-1">
-              <h3 class="text-lg font-bold text-white">${request.motorcycleName} - ${request.motorcycleColor} - دیپارتمنت ${request.motorcycleDepartment}</h3>
+              <h3 class="text-lg font-bold text-white">${request.motorcycleName} - ${request.motorcycleColor} - ${tm('department')} ${request.motorcycleDepartment}</h3>
               <p class="text-gray-100 mt-1">👤 ${request.employeeName} (${request.department})</p>
-              <p class="text-gray-100 mt-1">🆔 درخواست کننده: ${request.requesterFullName || 'ناشناس'}</p>
+              <p class="text-gray-100 mt-1">🆔 ${tm('requester')}: ${request.requesterFullName || tm('unknown')}</p>
               <p class="text-sm text-gray-100 mt-1">📅 ${request.requestDate}</p>
-              ${request.exitTime ? `<p class="text-sm text-gray-100">🕐 خروج: ${request.exitTime}</p>` : ''}
-              <p class="text-sm text-gray-100 mt-1">🔢 پلاک: ${request.motorcyclePlate}</p>
+              ${request.exitTime ? `<p class="text-sm text-gray-100">🕐 ${tm('exit')}: ${request.exitTime}</p>` : ''}
+              <p class="text-sm text-gray-100 mt-1">🔢 ${tm('plate')}: ${request.motorcyclePlate}</p>
             </div>
           </div>
           <div class="flex items-center gap-3">
             <span class="status-badge ${request.status === 'pending' ? 'status-pending' : 'status-active'}">
-              ${request.status === 'pending' ? '⏳ در انتظار تحویل' : '🔄 در حال استفاده'}
+              ${request.status === 'pending' ? '⏳ ' + tm('waiting_for_delivery') : '🔄 ' + tm('in_use')}
             </span>
             ${request.status === 'pending' ?
-        `<button class="btn btn-success" onclick="markAsExit('${request.__backendId}')">🚀 خروج</button>` :
-        `<button class="btn btn-primary" onclick="markAsEntry('${request.__backendId}')">🏁 ورود</button>`
+        `<button class="btn btn-success" onclick="markAsExit('${request.__backendId}')">🚀 ${tm('exit')}</button>` :
+        `<button class="btn btn-primary" onclick="markAsEntry('${request.__backendId}')">🏁 ${tm('entry')}</button>`
       }
             ${deleteButton}
           </div>
@@ -1589,6 +1695,20 @@ function selectDepartment(department) {
   document.getElementById('department-dropdown').classList.add('hidden');
   filterByDepartment();
 }
+// Helper function to check if a motorcycle belongs to a department (handles comma-separated departments)
+function motorcycleHasDepartment(motorcycle, department) {
+  if (!motorcycle.motorcycleDepartment) return false;
+  const motoDepts = motorcycle.motorcycleDepartment.split(',').map(d => d.trim()).filter(d => d);
+  return motoDepts.includes(department);
+}
+
+// Helper function to check if a motorcycle belongs to any of the user's departments
+function motorcycleMatchesUserDepartments(motorcycle, userDeptArray) {
+  if (!motorcycle.motorcycleDepartment) return false;
+  const motoDepts = motorcycle.motorcycleDepartment.split(',').map(d => d.trim()).filter(d => d);
+  return motoDepts.some(dept => userDeptArray.includes(dept));
+}
+
 function filterByDepartment() {
   const selectedDepartment = document.getElementById('selected-department').value;
   const employeeSelect = document.getElementById('employee-select');
@@ -1601,23 +1721,38 @@ function filterByDepartment() {
     employeeSelect.classList.add('opacity-50');
     motorcycleSelect.classList.add('opacity-50');
     employeeDisplay.textContent = 'ابتدا دیپارتمنت را انتخاب کنید';
-    motorcycleDisplay.textContent = 'ابتدا دیپارتمنت را انتخاب کنید';
+    motorcycleDisplay.textContent = 'ابتما دیپارتمنت را انتخاب کنید';
     return;
   }
   const activeRequests = allData.filter(d => d.type === 'request' && (d.status === 'pending' || d.status === 'active'));
   requestedEmployeeIds = activeRequests.map(r => r.employeeId);
   const userDept = window.currentUser.department || '';
+  
+  // Parse user's departments into an array
+  const userDeptArray = userDept.split(',').map(d => d.trim()).filter(d => d);
+  
+  // Check if user has full access ("همه", "all", or "BDT" in their departments)
+  // This applies to BOTH admin and regular users - admin does NOT get automatic full access
+  const hasFullAccess = userDeptArray.includes('همه') || 
+                        userDeptArray.includes('all') || 
+                        userDeptArray.includes('BDT');
+  
   if (selectedDepartment === 'متفرقه') {
-    if (userDept !== 'BDT' && userDept !== 'همه') {
-      availableEmployees = allData.filter(d => d.type === 'employee' && !requestedEmployeeIds.includes(d.employeeId));
-      availableMotorcycles = allData.filter(d => d.type === 'motorcycle' && d.motorcycleDepartment === userDept);
-    } else {
+    if (hasFullAccess) {
+      // Full access users can see all employees and motorcycles
       availableEmployees = allData.filter(d => d.type === 'employee' && !requestedEmployeeIds.includes(d.employeeId));
       availableMotorcycles = allData.filter(d => d.type === 'motorcycle');
+    } else {
+      // Limited users: see all employees but only motorcycles from their assigned departments
+      availableEmployees = allData.filter(d => d.type === 'employee' && !requestedEmployeeIds.includes(d.employeeId));
+      // Check if motorcycle has any department that matches user's departments (handles comma-separated)
+      availableMotorcycles = allData.filter(d => d.type === 'motorcycle' && motorcycleMatchesUserDepartments(d, userDeptArray));
     }
   } else {
+    // Filter by specific selected department
     availableEmployees = allData.filter(d => d.type === 'employee' && d.department === selectedDepartment && !requestedEmployeeIds.includes(d.employeeId));
-    availableMotorcycles = allData.filter(d => d.type === 'motorcycle' && d.motorcycleDepartment === selectedDepartment);
+    // Check if motorcycle has the selected department (handles comma-separated departments)
+    availableMotorcycles = allData.filter(d => d.type === 'motorcycle' && motorcycleHasDepartment(d, selectedDepartment));
   }
   employeeDisplay.textContent = availableEmployees.length > 0 ? tm('select_employee') : tm('no_employees_in_dept');
   motorcycleDisplay.textContent = availableMotorcycles.length > 0 ? tm('select_motorcycle') : tm('no_motorcycles_in_dept');
@@ -1636,13 +1771,28 @@ let availableMotorcycles = [];
 function updateModalSelects(employees, motorcycles) {
   const uniqueDepts = [...new Set([...employees.map(e => e.department), ...motorcycles.map(m => m.motorcycleDepartment)])].sort();
   const userDept = window.currentUser.department || '';
-  if (userDept === 'BDT' || userDept === 'همه') {
+  
+  // Parse user's assigned departments (comma-separated)
+  const userDeptArray = userDept.split(',').map(d => d.trim()).filter(d => d);
+  
+  // Check if user has "همه", "all", or "BDT" in their departments (full access)
+  // This applies to BOTH admin and regular users
+  if (userDeptArray.includes('همه') || userDeptArray.includes('all') || userDeptArray.includes('BDT')) {
     availableDepartments = ['متفرقه', ...uniqueDepts];
   } else {
+    // Show only departments assigned to the user (regardless of admin status)
     availableDepartments = ['متفرقه'];
-    if (uniqueDepts.includes(userDept)) {
-      availableDepartments.push(userDept);
-    }
+    userDeptArray.forEach(dept => {
+      if (uniqueDepts.includes(dept)) {
+        availableDepartments.push(dept);
+      }
+    });
+    // If user has departments assigned that don't exist in system yet, still show them
+    userDeptArray.forEach(dept => {
+      if (!availableDepartments.includes(dept) && dept !== '') {
+        availableDepartments.push(dept);
+      }
+    });
   }
   populateDepartmentDropdown();
 }
@@ -1863,7 +2013,95 @@ function closeNewRequestModal() {
 function openNewMotorcycleModal() {
   toggleLicenseField();
   toggleGpsStatusField();
+  // Reset department fields for new motorcycle
+  resetMotorcycleDepartmentFields('motorcycle-department-fields-container');
   document.getElementById('new-motorcycle-modal').classList.add('active');
+}
+
+// Function to add a new motorcycle department input field
+function addMotorcycleDepartmentField(containerId) {
+  const container = document.getElementById(containerId);
+  if (!container) return;
+  
+  const newRow = document.createElement('div');
+  newRow.className = 'flex items-center gap-2 department-field-row';
+  newRow.innerHTML = `
+    <input type="text" class="input-field text-gray-700 flex-1 motorcycle-department-input" data-i18n-placeholder="example_department" placeholder="مثال: پاور">
+    <button type="button" class="w-10 h-10 bg-red-500 hover:bg-red-600 text-white rounded-lg flex items-center justify-center text-xl font-bold shrink-0" onclick="removeMotorcycleDepartmentField(this)">−</button>
+  `;
+  container.appendChild(newRow);
+}
+
+// Function to remove a motorcycle department input field
+function removeMotorcycleDepartmentField(button) {
+  const row = button.closest('.department-field-row');
+  if (row) {
+    row.remove();
+  }
+}
+
+// Function to reset motorcycle department fields to initial state
+function resetMotorcycleDepartmentFields(containerId) {
+  const container = document.getElementById(containerId);
+  if (!container) return;
+  
+  container.innerHTML = `
+    <div class="flex items-center gap-2 department-field-row">
+      <input type="text" class="input-field text-gray-700 flex-1 motorcycle-department-input" data-i18n-placeholder="example_department" placeholder="مثال: پاور">
+      <button type="button" class="w-10 h-10 bg-green-500 hover:bg-green-600 text-white rounded-lg flex items-center justify-center text-xl font-bold shrink-0" onclick="addMotorcycleDepartmentField('${containerId}')">+</button>
+    </div>
+  `;
+}
+
+// Function to get all motorcycle department values from input fields
+function getMotorcycleDepartmentValues(containerId) {
+  const container = document.getElementById(containerId);
+  if (!container) return '';
+  
+  const inputs = container.querySelectorAll('.motorcycle-department-input');
+  const values = [];
+  
+  inputs.forEach(input => {
+    const value = input.value.trim();
+    if (value) {
+      values.push(value);
+    }
+  });
+  
+  return values.join(',');
+}
+
+// Function to populate motorcycle department fields from existing values
+function populateMotorcycleDepartmentFields(containerId, departments) {
+  const container = document.getElementById(containerId);
+  if (!container) return;
+  
+  container.innerHTML = '';
+  
+  const deptArray = departments ? departments.split(',').filter(d => d.trim()) : [];
+  
+  if (deptArray.length === 0) {
+    deptArray.push('');
+  }
+  
+  deptArray.forEach((dept, index) => {
+    const newRow = document.createElement('div');
+    newRow.className = 'flex items-center gap-2 department-field-row';
+    
+    if (index === 0) {
+      newRow.innerHTML = `
+        <input type="text" class="input-field text-gray-700 flex-1 motorcycle-department-input" data-i18n-placeholder="example_department" placeholder="مثال: پاور" value="${dept}">
+        <button type="button" class="w-10 h-10 bg-green-500 hover:bg-green-600 text-white rounded-lg flex items-center justify-center text-xl font-bold shrink-0" onclick="addMotorcycleDepartmentField('${containerId}')">+</button>
+      `;
+    } else {
+      newRow.innerHTML = `
+        <input type="text" class="input-field text-gray-700 flex-1 motorcycle-department-input" data-i18n-placeholder="example_department" placeholder="مثال: پاور" value="${dept}">
+        <button type="button" class="w-10 h-10 bg-red-500 hover:bg-red-600 text-white rounded-lg flex items-center justify-center text-xl font-bold shrink-0" onclick="removeMotorcycleDepartmentField(this)">−</button>
+      `;
+    }
+    
+    container.appendChild(newRow);
+  });
 }
 function openNewEmployeeModal() {
   document.getElementById('new-employee-modal').classList.add('active');
@@ -1881,7 +2119,8 @@ function openEditMotorcycleModal(motorcycleId) {
   document.getElementById('edit-motorcycle-engine-number').value = motorcycle.motorcycleEngineNumber || '';
   document.getElementById('edit-motorcycle-gps').value = motorcycle.motorcycleGps || '';
   document.getElementById('edit-motorcycle-gps-status').value = motorcycle.motorcycleGpsStatus || '';
-  document.getElementById('edit-motorcycle-department').value = motorcycle.motorcycleDepartment;
+  // Populate department fields with existing values (supports multiple departments)
+  populateMotorcycleDepartmentFields('edit-motorcycle-department-fields-container', motorcycle.motorcycleDepartment);
   document.getElementById('edit-motorcycle-status').value = motorcycle.motorcycleStatus || 'سالم';
   // Don't set file input values - they can't be pre-filled programmatically
   // If there are existing photos, show previews
@@ -2118,6 +2357,15 @@ async function submitNewMotorcycle(event) {
     }
   }
 
+  // Get departments from input fields (supports multiple departments)
+  const motorcycleDepartment = getMotorcycleDepartmentValues('motorcycle-department-fields-container');
+  
+  if (!motorcycleDepartment) {
+    showToast('لطفاً حداقل یک دیپارتمنت وارد کنید', '⚠️');
+    form.classList.remove('loading');
+    return;
+  }
+  
   const motorcycleData = {
     type: 'motorcycle',
     motorcycleName: document.getElementById('motorcycle-name').value,
@@ -2130,7 +2378,7 @@ async function submitNewMotorcycle(event) {
     motorcycleEngineNumber: document.getElementById('motorcycle-engine-number').value,
     motorcycleGps: gps,
     motorcycleGpsStatus: gpsStatus,
-    motorcycleDepartment: document.getElementById('motorcycle-department').value,
+    motorcycleDepartment: motorcycleDepartment,
     motorcycleStatus: document.getElementById('motorcycle-status').value,
     motorcyclePhoto: photoUrl,
     motorcycleDocuments: documentsUrl,
@@ -2194,6 +2442,15 @@ async function submitEditMotorcycle(event) {
     }
   }
 
+  // Get departments from input fields (supports multiple departments)
+  const motorcycleDepartment = getMotorcycleDepartmentValues('edit-motorcycle-department-fields-container');
+  
+  if (!motorcycleDepartment) {
+    showToast('لطفاً حداقل یک دیپارتمنت وارد کنید', '⚠️');
+    form.classList.remove('loading');
+    return;
+  }
+  
   const updatedMotorcycle = {
     ...motorcycle,
     motorcycleName: document.getElementById('edit-motorcycle-name').value,
@@ -2206,7 +2463,7 @@ async function submitEditMotorcycle(event) {
     motorcycleEngineNumber: document.getElementById('edit-motorcycle-engine-number').value,
     motorcycleGps: gps,
     motorcycleGpsStatus: gpsStatus,
-    motorcycleDepartment: document.getElementById('edit-motorcycle-department').value,
+    motorcycleDepartment: motorcycleDepartment,
     motorcycleStatus: document.getElementById('edit-motorcycle-status').value,
     motorcyclePhoto: photoInput.files && photoInput.files[0] ? photoUrl : (motorcycle.motorcyclePhoto || ''),
     motorcycleDocuments: documentsInput.files && documentsInput.files[0] ? documentsUrl : (motorcycle.motorcycleDocuments || ''),
@@ -2300,10 +2557,22 @@ async function markAsExit(requestId) {
     status: 'active'
   };
 
+  // Update local data immediately for instant UI feedback
+  const localIndex = allData.findIndex(d => d.__backendId === requestId);
+  if (localIndex !== -1) {
+    allData[localIndex] = { ...allData[localIndex], exitTime: exitTime, status: 'active' };
+    await saveData(allData);
+  }
+  
+  // Update UI immediately with local data
+  updateCurrentPage();
+
   const result = await window.dataSdk.update(updatedRequest);
   if (result.isOk) {
     showToast('خروج با موفقیت ثبت شد', '✅');
-    // No immediate sync needed - local data already has the updated request
+    // Immediately sync requests from Google Sheets to ensure data consistency
+    await syncRequestsWithGoogleSheets(allData);
+    // Update UI again with synced data
     updateCurrentPage();
   } else {
     showToast('خطا در ثبت خروج', '❌');
@@ -2332,12 +2601,24 @@ async function markAsEntry(requestId) {
     status: 'completed'
   };
 
+  // Update local data immediately for instant UI feedback
+  const localIndex = allData.findIndex(d => d.__backendId === requestId);
+  if (localIndex !== -1) {
+    allData[localIndex] = { ...allData[localIndex], entryTime: entryTime, usageTime: usageTime, status: 'completed' };
+    await saveData(allData);
+  }
+  
+  // Update UI immediately with local data
+  updateCurrentPage();
+
   const result = await window.dataSdk.update(updatedRequest);
 
   if (result.isOk) {
     await updateMotorcycleUsageAfterCompletion(updatedRequest);
     showToast('ورود با موفقیت ثبت شد', '✅');
-    // No immediate sync needed - local data already has the completed request
+    // Immediately sync requests from Google Sheets to ensure data consistency
+    await syncRequestsWithGoogleSheets(allData);
+    // Update UI again with synced data
     updateCurrentPage();
   } else {
     showToast('خطا در ثبت ورود', '❌');
@@ -3121,7 +3402,6 @@ async function syncRequestsWithGoogleSheets(allDataRef) {
   try {
     const result = await callGoogleSheets('readAll', 'request');
     if (result.success) {
-      // ONLY use Google Sheets data - ignore local data completely
       let gsRequests = result.data
         .map(mapGSToRequest)
         .filter(request => request.__backendId);
@@ -3138,15 +3418,58 @@ async function syncRequestsWithGoogleSheets(allDataRef) {
         );
         if (matchingMotor) {
           req.motorcycleId = matchingMotor.__backendId;
-        } else {
-          console.warn('No matching motorcycle found for request:', req);
         }
       }
 
-      // Keep only non-request data, replace all requests with Google Sheets data
+      // Get local requests
+      const localRequests = allDataRef.filter(d => d.type === 'request');
+      
+      // Create a map of local requests by ID for quick lookup
+      const localRequestMap = new Map();
+      localRequests.forEach(req => {
+        localRequestMap.set(req.__backendId, req);
+      });
+      
+      // Merge: For each Google Sheets request, decide whether to use GS or local version
+      const mergedRequests = gsRequests.map(gsReq => {
+        const localReq = localRequestMap.get(gsReq.__backendId);
+        
+        // If this item was recently updated locally, ALWAYS keep the local version
+        if (recentlyUpdatedIds.has(gsReq.__backendId) && localReq) {
+          console.log('Keeping local version for recently updated request:', gsReq.__backendId, 'local status:', localReq.status, 'gs status:', gsReq.status);
+          return localReq;
+        }
+        
+        // If local request exists and has a more recent status change, prefer local
+        // This handles the case where GS data hasn't propagated yet
+        if (localReq) {
+          // If local is 'active' but GS is 'pending', local is newer
+          if (localReq.status === 'active' && gsReq.status === 'pending') {
+            console.log('Local is newer (active vs pending):', gsReq.__backendId);
+            return localReq;
+          }
+          // If local is 'completed' but GS is 'active' or 'pending', local is newer
+          if (localReq.status === 'completed' && (gsReq.status === 'active' || gsReq.status === 'pending')) {
+            console.log('Local is newer (completed):', gsReq.__backendId);
+            return localReq;
+          }
+        }
+        
+        return gsReq;
+      });
+      
+      // Add any local requests that don't exist in Google Sheets yet (pending creation)
+      const gsIds = new Set(gsRequests.map(r => r.__backendId));
+      localRequests.forEach(localReq => {
+        if (!gsIds.has(localReq.__backendId)) {
+          mergedRequests.push(localReq);
+        }
+      });
+
+      // Keep only non-request data, replace all requests with merged data
       const nonRequestData = allDataRef.filter(d => d.type !== 'request');
       allDataRef.length = 0;
-      allDataRef.push(...nonRequestData, ...gsRequests);
+      allDataRef.push(...nonRequestData, ...mergedRequests);
       await saveData(allDataRef);
       return true;
     }
@@ -3356,4 +3679,90 @@ async function loadNotificationBadge() {
   } catch (error) {
     console.error('Error loading notification badge:', error);
   }
+}
+
+// Helper functions for multi-department selection in accounts
+function populateDepartmentCheckboxes(containerId, selectedDepts = '') {
+  const container = document.getElementById(containerId);
+  if (!container) return;
+  
+  // Get all unique departments from motorcycles and employees
+  const motorcycleDepts = [...new Set(allData.filter(d => d.type === 'motorcycle').map(m => m.motorcycleDepartment))];
+  const employeeDepts = [...new Set(allData.filter(d => d.type === 'employee').map(e => e.department))];
+  const allDepts = [...new Set([...motorcycleDepts, ...employeeDepts])].sort();
+  
+  if (allDepts.length === 0) {
+    container.innerHTML = '<div class="p-3 text-gray-500 text-center">هیچ دیپارتمنتی یافت نشد</div>';
+    return;
+  }
+  
+  const selectedArray = selectedDepts ? selectedDepts.split(',') : [];
+  
+  // Add "همه" option for full access
+  let html = `<label class="flex items-center gap-2 p-2 bg-gray-700 rounded cursor-pointer hover:bg-gray-600">
+    <input type="checkbox" class="w-5 h-5 rounded dept-checkbox" value="همه" onchange="handleDepartmentSelectAll('${containerId}')" ${selectedArray.includes('همه') ? 'checked' : ''}>
+    <span class="text-gray-200 font-bold">همه (دسترسی کامل)</span>
+  </label>`;
+  
+  allDepts.forEach(dept => {
+    html += `<label class="flex items-center gap-2 p-2 bg-gray-700 rounded cursor-pointer hover:bg-gray-600">
+      <input type="checkbox" class="w-5 h-5 rounded dept-checkbox" value="${dept}" onchange="handleDepartmentChange('${containerId}')" ${selectedArray.includes(dept) ? 'checked' : ''}>
+      <span class="text-gray-200">${dept}</span>
+    </label>`;
+  });
+  
+  container.innerHTML = html;
+}
+
+function handleDepartmentSelectAll(containerId) {
+  const container = document.getElementById(containerId);
+  if (!container) return;
+  
+  const allCheckbox = container.querySelector('input[value="همه"]');
+  const otherCheckboxes = container.querySelectorAll('input:not([value="همه"])');
+  
+  if (allCheckbox.checked) {
+    // Uncheck all other checkboxes when "همه" is selected
+    otherCheckboxes.forEach(cb => cb.checked = false);
+  }
+}
+
+function handleDepartmentChange(containerId) {
+  const container = document.getElementById(containerId);
+  if (!container) return;
+  
+  const allCheckbox = container.querySelector('input[value="همه"]');
+  const otherCheckboxes = container.querySelectorAll('input:not([value="همه"])');
+  
+  // If any department is checked, uncheck "همه"
+  const anyChecked = Array.from(otherCheckboxes).some(cb => cb.checked);
+  if (anyChecked && allCheckbox) {
+    allCheckbox.checked = false;
+  }
+}
+
+function getSelectedDepartments(containerId) {
+  const container = document.getElementById(containerId);
+  if (!container) return '';
+  
+  const checkboxes = container.querySelectorAll('input[type="checkbox"]:checked');
+  const values = Array.from(checkboxes).map(cb => cb.value);
+  
+  // If "همه" is selected, return 'all'
+  if (values.includes('همه')) {
+    return 'all';
+  }
+  
+  return values.join(',') || '';
+}
+
+function hasDepartmentAccess(userDepartments, targetDepartment) {
+  if (!userDepartments) return false;
+  
+  // 'all' means full access
+  if (userDepartments === 'all') return true;
+  
+  // Check if target department is in user's departments list
+  const deptArray = userDepartments.split(',');
+  return deptArray.includes(targetDepartment);
 }
