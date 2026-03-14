@@ -197,15 +197,47 @@ function mapGSToRequest(record) {
 }
 async function syncRequestsWithGoogleSheets(allDataRef) {
   try {
+    // Skip sync if locked (during critical updates) - prevents duplicate entries
+    if (typeof syncLock !== 'undefined' && syncLock) {
+      console.log('Request sync skipped - lock is active');
+      return false;
+    }
+    
     const result = await callGoogleSheets('readAll', 'request');
     if (result.success) {
       let gsRequests = result.data
         .map(mapGSToRequest)
         .filter(req => req.__backendId);
       gsRequests = gsRequests.filter(req => req.status !== 'delet' || true);
+      
+      // Get local requests that were recently updated (don't overwrite them)
+      const localRequests = allDataRef.filter(d => d.type === 'request');
+      
+      // Merge: Use Google Sheets data for non-recently-updated items, keep local for recently updated
+      const mergedRequests = gsRequests.map(gsReq => {
+        // If this item was recently updated locally, keep the local version
+        if (typeof recentlyUpdatedIds !== 'undefined' && recentlyUpdatedIds.has(gsReq.__backendId)) {
+          const localReq = localRequests.find(r => r.__backendId === gsReq.__backendId);
+          if (localReq) {
+            console.log('Keeping local version for recently updated request:', gsReq.__backendId);
+            return localReq;
+          }
+        }
+        return gsReq;
+      });
+      
+      // Add any local requests that don't exist in Google Sheets yet (pending creation)
+      const gsIds = new Set(gsRequests.map(r => r.__backendId));
+      localRequests.forEach(localReq => {
+        if (!gsIds.has(localReq.__backendId) && 
+            (typeof recentlyUpdatedIds === 'undefined' || !recentlyUpdatedIds.has(localReq.__backendId))) {
+          mergedRequests.push(localReq);
+        }
+      });
+      
       const nonRequestData = allDataRef.filter(d => d.type !== 'request');
       const motorcycles = nonRequestData.filter(d => d.type === 'motorcycle');
-      for (let req of gsRequests) {
+      for (let req of mergedRequests) {
         const matchingMotor = motorcycles.find(m =>
           m.motorcycleName === req.motorcycleName &&
           m.motorcycleColor === req.motorcycleColor &&
@@ -214,12 +246,10 @@ async function syncRequestsWithGoogleSheets(allDataRef) {
         );
         if (matchingMotor) {
           req.motorcycleId = matchingMotor.__backendId;
-        } else {
-          console.warn('No matching motorcycle found for request:', req);
         }
       }
       allDataRef.length = 0;
-      allDataRef.push(...nonRequestData, ...gsRequests);
+      allDataRef.push(...nonRequestData, ...mergedRequests);
       await saveData(allDataRef);
       return true;
     }
@@ -493,4 +523,3 @@ async function syncAlarmsWithGoogleSheets() {
     return [];
   }
 }
-
