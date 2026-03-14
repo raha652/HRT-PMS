@@ -106,6 +106,41 @@ JalaliDate.jalaliToGregorian = function (j_y, j_m, j_d) {
 };
 const dataStorageKey = 'motorcycleManagementData_${defaultConfig.company_name}';
 const usersStorageKey = 'userAccountsData';
+const DB_NAME = 'MotorcycleManagementDB';
+const DB_VERSION = 1;
+const STORE_NAME = 'data';
+let db = null;
+
+// Initialize IndexedDB
+async function initDB() {
+  return new Promise((resolve, reject) => {
+    if (db) {
+      resolve(db);
+      return;
+    }
+    
+    const request = indexedDB.open(DB_NAME, DB_VERSION);
+    
+    request.onerror = () => {
+      console.error('IndexedDB error:', request.error);
+      reject(request.error);
+    };
+    
+    request.onsuccess = () => {
+      db = request.result;
+      console.log('IndexedDB initialized successfully');
+      resolve(db);
+    };
+    
+    request.onupgradeneeded = (event) => {
+      const database = event.target.result;
+      if (!database.objectStoreNames.contains(STORE_NAME)) {
+        database.createObjectStore(STORE_NAME, { keyPath: 'key' });
+      }
+    };
+  });
+}
+
 function generateId() {
   return Date.now().toString() + Math.random().toString(36).substr(2, 9);
 }
@@ -125,19 +160,84 @@ function calculateUsageTime(exitTime, entryTime) {
 }
 async function loadData() {
   try {
+    // Try IndexedDB first
+    await initDB();
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction([STORE_NAME], 'readonly');
+      const store = transaction.objectStore(STORE_NAME);
+      const request = store.get('allData');
+      
+      request.onsuccess = () => {
+        if (request.result && request.result.value) {
+          console.log('Data loaded from IndexedDB');
+          resolve(request.result.value);
+        } else {
+          // Fallback to localStorage for migration
+          const stored = localStorage.getItem(dataStorageKey);
+          if (stored) {
+            console.log('Migrating data from localStorage to IndexedDB');
+            const data = JSON.parse(stored);
+            // Save to IndexedDB for future use
+            saveData(data);
+            // Clear localStorage to free space
+            localStorage.removeItem(dataStorageKey);
+            resolve(data);
+          } else {
+            resolve([]);
+          }
+        }
+      };
+      
+      request.onerror = () => {
+        console.error('IndexedDB load error, falling back to localStorage');
+        const stored = localStorage.getItem(dataStorageKey);
+        resolve(stored ? JSON.parse(stored) : []);
+      };
+    });
+  } catch (error) {
+    console.error('Error loading data:', error);
+    // Final fallback to localStorage
     const stored = localStorage.getItem(dataStorageKey);
     return stored ? JSON.parse(stored) : [];
-  } catch (error) {
-    console.error('Error loading data from localStorage:', error);
-    return [];
   }
 }
+
 async function saveData(data) {
   try {
-    localStorage.setItem(dataStorageKey, JSON.stringify(data));
+    // Always use IndexedDB
+    await initDB();
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction([STORE_NAME], 'readwrite');
+      const store = transaction.objectStore(STORE_NAME);
+      const request = store.put({ key: 'allData', value: data });
+      
+      request.onsuccess = () => {
+        console.log('Data saved to IndexedDB successfully');
+        resolve(true);
+      };
+      
+      request.onerror = () => {
+        console.error('IndexedDB save error:', request.error);
+        // Fallback to localStorage
+        try {
+          localStorage.setItem(dataStorageKey, JSON.stringify(data));
+          resolve(true);
+        } catch (lsError) {
+          console.error('localStorage fallback also failed:', lsError);
+          showToast('خطا در ذخیره داده‌ها', '❌');
+          resolve(false);
+        }
+      };
+    });
   } catch (error) {
-    console.error('Error saving data to localStorage:', error);
-    showToast('خطا در ذخیره داده‌ها', '❌');
+    console.error('Error saving data:', error);
+    // Fallback to localStorage
+    try {
+      localStorage.setItem(dataStorageKey, JSON.stringify(data));
+    } catch (lsError) {
+      console.error('localStorage fallback failed:', lsError);
+      showToast('خطا در ذخیره داده‌ها', '❌');
+    }
   }
 }
 async function loadUsers() {
