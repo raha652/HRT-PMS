@@ -406,17 +406,13 @@
               </select>
             </div>
             <div>
-              <label class="block text-sm font-semibold text-gray-100 mb-2" data-i18n="department"
-                >دیپارتمنت</label
-              >
-              <input
-                type="text"
-                id="motorcycle-department"
-                class="input-field text-gray-700 mb-2"
-                data-i18n-placeholder="example_department"
-                placeholder="مثال: پاور"
-                required
-              />
+              <label class="block text-sm font-semibold text-gray-100 mb-2" data-i18n="departments">دیپارتمنت‌ها</label>
+              <div id="motorcycle-department-fields-container" class="space-y-2">
+                <div class="flex items-center gap-2 department-field-row">
+                  <input type="text" class="input-field text-gray-700 flex-1 motorcycle-department-input" data-i18n-placeholder="example_department" placeholder="مثال: پاور">
+                  <button type="button" class="w-10 h-10 bg-green-500 hover:bg-green-600 text-white rounded-lg flex items-center justify-center text-xl font-bold shrink-0" onclick="addMotorcycleDepartmentField('motorcycle-department-fields-container')">+</button>
+                </div>
+              </div>
             </div>
             <div>
               <label class="block text-sm font-semibold text-gray-100 mb-2" data-i18n="motorcycle_status"
@@ -617,17 +613,10 @@
               </select>
             </div>
             <div>
-              <label class="block text-sm font-semibold text-gray-100 mb-2" data-i18n="department"
-                >دیپارتمنت</label
-              >
-              <input
-                type="text"
-                id="edit-motorcycle-department"
-                class="input-field text-gray-800 mb-2"
-                data-i18n-placeholder="example_department"
-                placeholder="مثال: پاور"
-                required
-              />
+              <label class="block text-sm font-semibold text-gray-100 mb-2" data-i18n="departments">دیپارتمنت‌ها</label>
+              <div id="edit-motorcycle-department-fields-container" class="space-y-2">
+                <!-- Department fields will be added dynamically -->
+              </div>
             </div>
             <div>
               <label class="block text-sm font-semibold text-gray-100 mb-2" data-i18n="motorcycle_status"
@@ -792,5 +781,4 @@
     <script src="./index.js"></script>
   </body>
 </html>
-
 
