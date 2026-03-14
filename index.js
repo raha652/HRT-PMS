@@ -1,4 +1,4 @@
-// Application Constants
+// Application Constantss
 const IDLE_TIMEOUT_SECONDS = 21600;
 const SYNC_INTERVAL_MS = 8000;
 const MAX_KILOMETERS = 1000000;
