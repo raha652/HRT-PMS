@@ -26,6 +26,7 @@ const translations = {
     time: 'زمان',
     name: 'نام',
     department: 'دیپارتمنت',
+    departments: 'دیپارتمنت‌ها',
     color: 'رنگ',
     plate: 'پلاک',
     
@@ -136,6 +137,7 @@ const translations = {
     unknown: 'نامشخص',
     available_in_parking: 'موجود در پارکینگ',
     waiting_for_exit: 'در انتظار خروج',
+    waiting_for_delivery: 'در انتظار تحویل',
     
     // Messages
     motorcycle_in_use: 'این موتور سکیل در حال استفاده است و قابل حذف نیست',
@@ -501,6 +503,7 @@ const translations = {
     time: 'Time',
     name: 'Name',
     department: 'Department',
+    departments: 'Departments',
     color: 'Color',
     plate: 'Plate',
     
@@ -611,6 +614,7 @@ const translations = {
     unknown: 'Unknown',
     available_in_parking: 'Available in Parking',
     waiting_for_exit: 'Waiting for Exit',
+    waiting_for_delivery: 'Waiting for Delivery',
     
     // Messages
     motorcycle_in_use: 'This motorcycle is in use and cannot be deleted',
@@ -976,6 +980,7 @@ const translations = {
     time: 'وخت',
     name: 'نوم',
     department: 'څانګه',
+    departments: 'څانګې',
     color: 'رنګ',
     plate: 'پلیټ',
     
@@ -1086,6 +1091,7 @@ const translations = {
     unknown: 'نامعلوم',
     available_in_parking: 'په پارکینګ کې شتون لري',
     waiting_for_exit: 'د وتلو په تمه',
+    waiting_for_delivery: 'د سپارلو په تمه',
     
     // Messages
     motorcycle_in_use: 'دا موټرسایکل په کار کې دی او ړنګېدای نشي',
