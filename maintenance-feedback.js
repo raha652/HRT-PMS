@@ -1,4 +1,4 @@
-﻿// maintenance-feedback.js - related functions for maintenance feedback page
+// maintenance-feedback.js - related functions for maintenance feedback page
 
 // Use window object to avoid redeclaration errors
 window.allFeedbacks = window.allFeedbacks || [];
@@ -44,7 +44,8 @@ function setStatusFilter(status) {
     'all': 'status-filter-all',
     'نیاز به تعمیر دارد': 'status-filter-needs-repair',
     'تعمیر شد': 'status-filter-repaired',
-    'تعمیر نمیشود': 'status-filter-cannot-repair'
+    'تعمیر نمیشود': 'status-filter-cannot-repair',
+    'در حال بررسی': 'status-filter-under-review'
   };
 
   Object.values(filterMap).forEach(id => {
@@ -86,6 +87,7 @@ function getTranslatedStatus(persianStatus) {
   if (persianStatus === 'نیاز به تعمیر دارد') return t('needs_repair');
   if (persianStatus === 'تعمیر شد') return t('repaired');
   if (persianStatus === 'تعمیر نمیشود') return t('cannot_repair');
+  if (persianStatus === 'در حال بررسی') return t('under_review');
   return t('needs_repair');
 }
 
@@ -100,7 +102,7 @@ function renderFeedbacks() {
   }
 
   filtered.sort((a, b) => {
-    const statusOrder = { 'نیاز به تعمیر دارد': 0, 'تعمیر نمیشود': 2, 'تعمیر شد': 3 };
+    const statusOrder = { 'نیاز به تعمیر دارد': 0, 'در حال بررسی': 1, 'تعمیر نمیشود': 2, 'تعمیر شد': 3 };
     const statusA = statusOrder[a.repairStatus] ?? 1;
     const statusB = statusOrder[b.repairStatus] ?? 1;
 
@@ -123,8 +125,9 @@ function renderFeedbacks() {
   const isFeedback = window.currentTab === 'feedbacks';
 
   container.innerHTML = filtered.map(item => {
-    const statusClass = item.repairStatus === 'تعمیر شد' ? 'status-repaired'
+    let statusClass = item.repairStatus === 'تعمیر شد' ? 'status-repaired'
       : item.repairStatus === 'تعمیر نمیشود' ? 'status-cannot-repair'
+      : item.repairStatus === 'در حال بررسی' ? 'status-under-review'
       : 'status-needs-repair';
 
     const pinnedClass = item.pinned ? 'pinned-item' : '';
@@ -146,6 +149,9 @@ function renderFeedbacks() {
 
             <p class="text-gray-200 text-base leading-relaxed">${item.content || ''}</p>
             ${item.repairDate ? `<p class="text-xs text-white mt-2">🔧 ${t('repair_time')}: ${formatDateDisplay(item.repairDate)} ${item.repairedBy ? `| 👤 ${item.repairedBy}` : ''}</p>` : ''}
+            
+            <!-- Replies Section -->
+            ${renderReplies(item)}
           </div>
 
           ${isFeedback ? `
@@ -156,6 +162,7 @@ function renderFeedbacks() {
               </button>
               <div id="dropdown-${item.__backendId}" class="status-dropdown-menu" style="display: none; position: absolute; top: 100%; left: 0; background: linear-gradient(145deg, #1f2937 0%, #374151 100%); border-radius: 12px; box-shadow: 0 10px 40px rgba(0,0,0,0.6); z-index: 9999; min-width: 200px; border: 1px solid rgba(255, 255, 255, 0.2);">
                 <div onclick="updateRepairStatus('${item.__backendId}', 'نیاز به تعمیر دارد')" style="padding: 14px 18px; cursor: pointer; border-bottom: 1px solid rgba(255,255,255,0.1); font-size: 14px; color: #fff; border-radius: 12px 12px 0 0;" onmouseover="this.style.background='rgba(220,38,38,0.5)'" onmouseout="this.style.background='transparent'">🔴 ${t('needs_repair')}</div>
+                <div onclick="updateRepairStatus('${item.__backendId}', 'در حال بررسی')" style="padding: 14px 18px; cursor: pointer; border-bottom: 1px solid rgba(255,255,255,0.1); font-size: 14px; color: #fff;" onmouseover="this.style.background='rgba(59,130,246,0.5)'" onmouseout="this.style.background='transparent'">🔵 ${t('under_review')}</div>
                 <div onclick="updateRepairStatus('${item.__backendId}', 'تعمیر نمیشود')" style="padding: 14px 18px; cursor: pointer; border-bottom: 1px solid rgba(255,255,255,0.1); font-size: 14px; color: #fff;" onmouseover="this.style.background='rgba(234,88,12,0.5)'" onmouseout="this.style.background='transparent'">🟠 ${t('cannot_repair')}</div>
                 <div onclick="updateRepairStatus('${item.__backendId}', 'تعمیر شد')" style="padding: 14px 18px; cursor: pointer; font-size: 14px; color: #fff; border-radius: 0 0 12px 12px;" onmouseover="this.style.background='rgba(22,163,74,0.5)'" onmouseout="this.style.background='transparent'">🟢 ${t('repaired')}</div>
               </div>
@@ -189,44 +196,54 @@ function toggleStatusDropdown(e, id) {
 }
 
 async function updateRepairStatus(id, status) {
-  const item = window.allFeedbacks.find(f => f.__backendId === id);
-  if (!item) return;
+  try {
+    const item = window.allFeedbacks.find(f => f.__backendId === id);
+    if (!item) return;
 
-  const now = new Date();
-  const repairDate = status !== 'نیاز به تعمیر دارد'
-    ? `${now.getFullYear()}/${String(now.getMonth() + 1).padStart(2, '0')}/${String(now.getDate()).padStart(2, '0')}` : '';
+    const now = new Date();
+    const repairDate = status !== 'نیاز به تعمیر دارد'
+      ? `${now.getFullYear()}/${String(now.getMonth() + 1).padStart(2, '0')}/${String(now.getDate()).padStart(2, '0')}` : '';
 
-  const currentUser = window.currentUser || {};
-  const repairedBy = status !== 'نیاز به تعمیر دارد' ? currentUser.fullName || 'نامشخص' : '';
+    const currentUser = window.currentUser || {};
+    const repairedBy = status !== 'نیاز به تعمیر دارد' ? currentUser.fullName || 'نامشخص' : '';
 
-  item.repairStatus = status;
-  item.repairDate = repairDate;
-  item.repairedBy = repairedBy;
+    item.repairStatus = status;
+    item.repairDate = repairDate;
+    item.repairedBy = repairedBy;
 
-  const gsData = mapFeedbackToGS(item);
-  const result = await callGoogleSheets('update', 'feedback', gsData);
+    const gsData = mapFeedbackToGS(item);
+    const result = await callGoogleSheets('update', 'feedback', gsData);
 
-  if (result.success) {
-    showToast(t('status_updated'), '✅');
-    renderFeedbacks();
-  } else {
+    if (result.success) {
+      showToast(t('status_updated'), '✅');
+      renderFeedbacks();
+    } else {
+      showToast(t('update_error'), '❌');
+    }
+  } catch (error) {
+    console.error('Error updating repair status:', error);
     showToast(t('update_error'), '❌');
   }
 }
 
 async function togglePin(id) {
-  const item = window.allFeedbacks.find(f => f.__backendId === id);
-  if (!item) return;
+  try {
+    const item = window.allFeedbacks.find(f => f.__backendId === id);
+    if (!item) return;
 
-  item.pinned = !item.pinned;
+    item.pinned = !item.pinned;
 
-  const gsData = mapFeedbackToGS(item);
-  const result = await callGoogleSheets('update', 'feedback', gsData);
+    const gsData = mapFeedbackToGS(item);
+    const result = await callGoogleSheets('update', 'feedback', gsData);
 
-  if (result.success) {
-    showToast(item.pinned ? 'پین شد' : 'پین برداشته شد', '📌');
-    renderFeedbacks();
-  } else {
+    if (result.success) {
+      showToast(item.pinned ? 'پین شد' : 'پین برداشته شد', '📌');
+      renderFeedbacks();
+    } else {
+      showToast('خطا در آپدیت', '❌');
+    }
+  } catch (error) {
+    console.error('Error toggling pin:', error);
     showToast('خطا در آپدیت', '❌');
   }
 }
@@ -239,6 +256,199 @@ document.addEventListener('click', (e) => {
     });
   }
 });
+
+// Render replies for a feedback item
+function renderReplies(item, depth = 0) {
+  const replies = item.replies || [];
+  if (replies.length === 0 && depth === 0) {
+    return `
+      <div class="replies-container mt-3">
+        <button onclick="toggleReplyForm('${item.__backendId}')" class="text-blue-400 text-sm hover:text-blue-300 flex items-center gap-1">
+          💬 ${t('reply')}
+        </button>
+        <div id="reply-form-${item.__backendId}" class="hidden mt-2">
+          <div class="flex gap-2">
+            <input type="text" id="reply-input-${item.__backendId}" placeholder="${t('write_reply')}" 
+              class="flex-1 bg-gray-700 text-white px-3 py-2 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+            <button onclick="submitReply('${item.__backendId}')" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm">
+              ${t('submit')}
+            </button>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  const repliesHtml = replies.map((reply, index) => {
+    const nestedRepliesHtml = reply.replies && reply.replies.length > 0 
+      ? renderNestedReplies(item.__backendId, index, reply.replies)
+      : '';
+    
+    return `
+      <div class="bg-gray-800/50 rounded-lg p-3 mt-2 mr-4 border-r-2 border-blue-500">
+        <div class="flex items-center gap-2 mb-1">
+          <span class="text-xs text-blue-400">👤 ${reply.authorName || t('unknown')}</span>
+          <span class="text-xs text-gray-500">📅 ${reply.date || ''}</span>
+        </div>
+        <p class="text-sm text-gray-300">${reply.content || ''}</p>
+        ${nestedRepliesHtml}
+        <button onclick="toggleReplyToReplyForm('${item.__backendId}', ${index})" class="text-blue-400 text-xs mt-2 hover:text-blue-300 flex items-center gap-1">
+          ↩️ ${t('reply')}
+        </button>
+        <div id="reply-to-reply-form-${item.__backendId}-${index}" class="hidden mt-2">
+          <div class="flex gap-2">
+            <input type="text" id="reply-to-reply-input-${item.__backendId}-${index}" placeholder="${t('write_reply')}" 
+              class="flex-1 bg-gray-700 text-white px-2 py-1 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-blue-500">
+            <button onclick="submitReplyToReply('${item.__backendId}', ${index})" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded-lg text-xs">
+              ${t('submit')}
+            </button>
+          </div>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  return `
+    <div class="replies-container mt-3">
+      ${repliesHtml}
+      <button onclick="toggleReplyForm('${item.__backendId}')" class="text-blue-400 text-sm mt-2 hover:text-blue-300 flex items-center gap-1">
+        💬 ${t('reply')}
+      </button>
+      <div id="reply-form-${item.__backendId}" class="hidden mt-2">
+        <div class="flex gap-2">
+          <input type="text" id="reply-input-${item.__backendId}" placeholder="${t('write_reply')}" 
+            class="flex-1 bg-gray-700 text-white px-3 py-2 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+          <button onclick="submitReply('${item.__backendId}')" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm">
+            ${t('submit')}
+          </button>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+// Render nested replies
+function renderNestedReplies(feedbackId, replyIndex, replies) {
+  return replies.map(reply => `
+    <div class="bg-gray-900/50 rounded-lg p-2 mt-2 mr-4 border-r-2 border-green-500">
+      <div class="flex items-center gap-2 mb-1">
+        <span class="text-xs text-green-400">👤 ${reply.authorName || t('unknown')}</span>
+        <span class="text-xs text-gray-500">📅 ${reply.date || ''}</span>
+      </div>
+      <p class="text-xs text-gray-300">${reply.content || ''}</p>
+    </div>
+  `).join('');
+}
+
+// Toggle reply to reply form visibility
+function toggleReplyToReplyForm(feedbackId, replyIndex) {
+  const form = document.getElementById(`reply-to-reply-form-${feedbackId}-${replyIndex}`);
+  if (form) {
+    form.classList.toggle('hidden');
+  }
+}
+
+// Toggle reply form visibility
+function toggleReplyForm(id) {
+  const form = document.getElementById(`reply-form-${id}`);
+  if (form) {
+    form.classList.toggle('hidden');
+  }
+}
+
+// Submit a new reply
+async function submitReply(id) {
+  const input = document.getElementById(`reply-input-${id}`);
+  if (!input) return;
+  
+  const content = input.value.trim();
+  if (!content) {
+    showToast(t('fill_all_fields'), '⚠️');
+    return;
+  }
+
+  try {
+    const item = window.allFeedbacks.find(f => f.__backendId === id);
+    if (!item) return;
+
+    const currentUser = window.currentUser || {};
+    const now = new Date();
+    const replyDate = `${now.getFullYear()}/${String(now.getMonth() + 1).padStart(2, '0')}/${String(now.getDate()).padStart(2, '0')}`;
+
+    // Initialize replies array if not exists
+    if (!item.replies) item.replies = [];
+
+    // Add new reply
+    item.replies.push({
+      authorName: currentUser.fullName || 'نامشخص',
+      authorDept: currentUser.department || 'نامشخص',
+      content: content,
+      date: replyDate
+    });
+
+    // Update in Google Sheets
+    const gsData = mapFeedbackToGS(item);
+    const result = await callGoogleSheets('update', 'feedback', gsData);
+
+    if (result.success) {
+      showToast(t('reply_submitted'), '✅');
+      renderFeedbacks();
+    } else {
+      showToast(t('reply_error'), '❌');
+    }
+  } catch (error) {
+    console.error('Error submitting reply:', error);
+    showToast(t('reply_error'), '❌');
+  }
+}
+
+// Submit a reply to a reply
+async function submitReplyToReply(feedbackId, replyIndex) {
+  const input = document.getElementById(`reply-to-reply-input-${feedbackId}-${replyIndex}`);
+  if (!input) return;
+  
+  const content = input.value.trim();
+  if (!content) {
+    showToast(t('fill_all_fields'), '⚠️');
+    return;
+  }
+
+  try {
+    const item = window.allFeedbacks.find(f => f.__backendId === feedbackId);
+    if (!item || !item.replies || !item.replies[replyIndex]) return;
+
+    const currentUser = window.currentUser || {};
+    const now = new Date();
+    const replyDate = `${now.getFullYear()}/${String(now.getMonth() + 1).padStart(2, '0')}/${String(now.getDate()).padStart(2, '0')}`;
+
+    // Initialize nested replies if not exists
+    if (!item.replies[replyIndex].replies) {
+      item.replies[replyIndex].replies = [];
+    }
+
+    // Add nested reply
+    item.replies[replyIndex].replies.push({
+      authorName: currentUser.fullName || 'نامشخص',
+      authorDept: currentUser.department || 'نامشخص',
+      content: content,
+      date: replyDate
+    });
+
+    // Update in Google Sheets
+    const gsData = mapFeedbackToGS(item);
+    const result = await callGoogleSheets('update', 'feedback', gsData);
+
+    if (result.success) {
+      showToast(t('reply_submitted'), '✅');
+      renderFeedbacks();
+    } else {
+      showToast(t('reply_error'), '❌');
+    }
+  } catch (error) {
+    console.error('Error submitting reply to reply:', error);
+    showToast(t('reply_error'), '❌');
+  }
+}
 
 document.addEventListener('DOMContentLoaded', () => {
   updateDateTime();
