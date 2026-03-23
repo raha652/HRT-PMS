@@ -19,6 +19,7 @@ let allUsers = [];
 let currentRecordCount = 0;
 let currentPasswordType = '';
 let currentStatusFilter = 'all';
+let dataReady = false; // Flag to track if data is fully loaded
 let currentMotorcycleDeptFilter = 'all';
 let currentMotorcycleSearchTerm = '';
 let departments = [];
@@ -47,17 +48,33 @@ let currentIntervalDisplay = 'هیچکدام';
 
 async function syncAllData() {
   try {
-    console.log('Starting full data sync...');
-    await syncEmployeesWithGoogleSheets(allData);
-    console.log('Employees synced:', allData.filter(d => d.type === 'employee').length);
-    await syncMotorcyclesWithGoogleSheets(allData);
-    console.log('Motorcycles synced:', allData.filter(d => d.type === 'motorcycle').length);
-    await syncRequestsWithGoogleSheets(allData);
-    console.log('Requests synced:', allData.filter(d => d.type === 'request').length);
+    console.log('Starting full data sync (parallel)...');
+    const startTime = Date.now();
+    
+    // Parallel sync for faster performance
+    await Promise.all([
+      syncEmployeesWithGoogleSheets(allData),
+      syncMotorcyclesWithGoogleSheets(allData),
+      syncRequestsWithGoogleSheets(allData)
+    ]);
+    
+    // Try to sync feedback (may not be available on all pages)
+    try {
+      if (typeof syncFeedbackWithGoogleSheets === 'function') {
+        await syncFeedbackWithGoogleSheets(allData);
+      }
+    } catch (feedbackError) {
+      console.log('Feedback sync skipped:', feedbackError.message);
+    }
+    
     await saveData(allData);
-    await syncFeedbackWithGoogleSheets(allData);
     dataHandler.onDataChanged(allData);
-    console.log('Data synced successfully');
+    
+    const elapsed = Date.now() - startTime;
+    console.log(`Data synced successfully in ${elapsed}ms`);
+    console.log('Employees:', allData.filter(d => d.type === 'employee').length);
+    console.log('Motorcycles:', allData.filter(d => d.type === 'motorcycle').length);
+    console.log('Requests:', allData.filter(d => d.type === 'request').length);
   } catch (error) {
     console.error('Sync error:', error);
     showToast('خطا در همگام‌سازی داده‌ها', '⚠️');
@@ -641,31 +658,46 @@ function hideLoading() {
 }
 async function loadAndSyncDataForPage(page) {
   try {
+    dataReady = false; // Mark data as not ready during sync
+    console.log('Starting parallel sync for page:', page);
+    const startTime = Date.now();
+    
     switch (page) {
       case 'dashboard':
       case 'management':
-        await syncEmployeesWithGoogleSheets(allData);
-        await syncMotorcyclesWithGoogleSheets(allData);
-        await syncRequestsWithGoogleSheets(allData);
+        // Parallel sync for faster loading
+        await Promise.all([
+          syncEmployeesWithGoogleSheets(allData),
+          syncMotorcyclesWithGoogleSheets(allData),
+          syncRequestsWithGoogleSheets(allData)
+        ]);
         break;
       case 'requests':
       case 'request-menu':
-        await syncEmployeesWithGoogleSheets(allData);
-        await syncMotorcyclesWithGoogleSheets(allData);
-        await syncRequestsWithGoogleSheets(allData);
+        // Parallel sync for request pages
+        await Promise.all([
+          syncEmployeesWithGoogleSheets(allData),
+          syncMotorcyclesWithGoogleSheets(allData),
+          syncRequestsWithGoogleSheets(allData)
+        ]);
         break;
       case 'history':
       case 'motorcycle-status':
-        await syncMotorcyclesWithGoogleSheets(allData);
-        await syncRequestsWithGoogleSheets(allData);
+        // Parallel sync for status pages
+        await Promise.all([
+          syncMotorcyclesWithGoogleSheets(allData),
+          syncRequestsWithGoogleSheets(allData)
+        ]);
         break;
       case 'motorcycles':
         await syncMotorcyclesWithGoogleSheets(allData);
         break;
       case 'usage-amount':
-        await syncMotorcyclesWithGoogleSheets(allData);
-        await syncRequestsWithGoogleSheets(allData);
-        await loadFuelReports();
+        await Promise.all([
+          syncMotorcyclesWithGoogleSheets(allData),
+          syncRequestsWithGoogleSheets(allData),
+          loadFuelReports()
+        ]);
         break;
       case 'employees':
         await syncEmployeesWithGoogleSheets(allData);
@@ -676,18 +708,26 @@ async function loadAndSyncDataForPage(page) {
         break;
       case 'fuel-expenses':
         renderMotorcyclesForFuel();
-        syncMotorcyclesWithGoogleSheets(allData).then(() => {
-          console.log('After background sync in fuel-expenses: allData length =', allData.length, 'motorcycles =', allData.filter(d => d.type === 'motorcycle').length);
-          renderMotorcyclesForFuel();
-        });
-        await loadFuelReports();
+        await Promise.all([
+          syncMotorcyclesWithGoogleSheets(allData),
+          loadFuelReports()
+        ]);
+        renderMotorcyclesForFuel();
         console.log('fuelReports length =', fuelReports.length);
         break;
       default:
         break;
     }
+    
+    dataReady = true; // Mark data as ready
+    const elapsed = Date.now() - startTime;
+    console.log(`Sync completed for page ${page} in ${elapsed}ms. Data ready:`, dataReady);
+    console.log('Employees:', allData.filter(d => d.type === 'employee').length);
+    console.log('Motorcycles:', allData.filter(d => d.type === 'motorcycle').length);
+    console.log('Requests:', allData.filter(d => d.type === 'request').length);
   } catch (error) {
     console.error('Error in loadAndSyncDataForPage:', error);
+    dataReady = true; // Still mark as ready to prevent infinite loading
   }
 }
 function updateCurrentPage() {
@@ -1815,6 +1855,20 @@ function filterByDepartment() {
   const motorcycleSelect = document.getElementById('motorcycle-select');
   const employeeDisplay = document.getElementById('employee-display');
   const motorcycleDisplay = document.getElementById('motorcycle-display');
+  
+  // Check if data is ready
+  if (!dataReady) {
+    employeeDisplay.textContent = 'در حال بارگذاری...';
+    motorcycleDisplay.textContent = 'در حال بارگذاری...';
+    employeeSelect.disabled = true;
+    motorcycleSelect.disabled = true;
+    employeeSelect.classList.add('opacity-50');
+    motorcycleSelect.classList.add('opacity-50');
+    // Retry after a short delay
+    setTimeout(() => filterByDepartment(), 500);
+    return;
+  }
+  
   if (!selectedDepartment) {
     employeeSelect.disabled = true;
     motorcycleSelect.disabled = true;
@@ -2100,11 +2154,57 @@ function verifyPassword(event) {
   }
 }
 function openNewRequestModal() {
+  // Open modal immediately for better UX
+  document.getElementById('new-request-modal').classList.add('active');
+  
   const employees = allData.filter(d => d.type === 'employee');
   const motorcycles = allData.filter(d => d.type === 'motorcycle');
-  updateModalSelects(employees, motorcycles);
-  document.getElementById('new-request-modal').classList.add('active');
-  populateDepartmentDropdown();
+  
+  // Log for debugging
+  console.log('Opening request modal - Data ready:', dataReady, 'Employees:', employees.length, 'Motorcycles:', motorcycles.length);
+  
+  // If data is not ready, show loading state in dropdowns
+  if (!dataReady) {
+    const employeeDisplay = document.getElementById('employee-display');
+    const motorcycleDisplay = document.getElementById('motorcycle-display');
+    const departmentDisplay = document.getElementById('department-display');
+    
+    if (departmentDisplay) departmentDisplay.textContent = 'در حال بارگذاری...';
+    if (employeeDisplay) employeeDisplay.textContent = 'در حال بارگذاری...';
+    if (motorcycleDisplay) motorcycleDisplay.textContent = 'در حال بارگذاری...';
+    
+    // Disable dropdowns until data is ready
+    const employeeSelect = document.getElementById('employee-select');
+    const motorcycleSelect = document.getElementById('motorcycle-select');
+    if (employeeSelect) {
+      employeeSelect.disabled = true;
+      employeeSelect.classList.add('opacity-50');
+    }
+    if (motorcycleSelect) {
+      motorcycleSelect.disabled = true;
+      motorcycleSelect.classList.add('opacity-50');
+    }
+    
+    // Wait for data to be ready and then update
+    const checkDataReady = setInterval(() => {
+      if (dataReady) {
+        clearInterval(checkDataReady);
+        const employees = allData.filter(d => d.type === 'employee');
+        const motorcycles = allData.filter(d => d.type === 'motorcycle');
+        updateModalSelects(employees, motorcycles);
+        populateDepartmentDropdown();
+        
+        // Reset dropdown text
+        if (departmentDisplay) departmentDisplay.textContent = 'دیپارتمنت را انتخاب کنید';
+        if (employeeDisplay) employeeDisplay.textContent = 'ابتدا دیپارتمنت را انتخاب کنید';
+        if (motorcycleDisplay) motorcycleDisplay.textContent = 'ابتدا دیپارتمنت را انتخاب کنید';
+      }
+    }, 200);
+  } else {
+    // Data is ready, populate immediately
+    updateModalSelects(employees, motorcycles);
+    populateDepartmentDropdown();
+  }
 }
 function closeNewRequestModal() {
   closeModal('new-request-modal');
@@ -2262,6 +2362,13 @@ async function submitNewRequest(event) {
   }
   const form = event.target;
   form.classList.add('loading');
+  
+  // Force sync before checking availability to prevent duplicate requests
+  await Promise.all([
+    syncMotorcyclesWithGoogleSheets(allData),
+    syncRequestsWithGoogleSheets(allData)
+  ]);
+  
   const employeeId = document.getElementById('selected-employee').value;
   const motorcycleId = document.getElementById('selected-motorcycle').value;
   const employee = allData.find(d => d.__backendId === employeeId);
@@ -2272,6 +2379,21 @@ async function submitNewRequest(event) {
     form.classList.remove('loading');
     return;
   }
+  
+  // Check if employee already has an active request
+  const employeeActiveRequests = allData.filter(d =>
+    d.type === 'request' &&
+    d.employeeId === employee.employeeId &&
+    (d.status === 'pending' || d.status === 'active')
+  );
+  
+  if (employeeActiveRequests.length > 0) {
+    showToast('این کارمند قبلاً یک درخواست فعال دارد. لطفاً ابتدا درخواست قبلی را تکمیل کنید.', '⚠️');
+    form.classList.remove('loading');
+    return;
+  }
+  
+  // Check if motorcycle already has an active request
   const activeRequests = allData.filter(d =>
     d.type === 'request' &&
     d.motorcycleId === motorcycle.__backendId &&
@@ -2657,6 +2779,10 @@ async function markAsExit(requestId) {
     status: 'active'
   };
 
+  // Mark this request as recently updated to prevent sync from overwriting
+  recentlyUpdatedIds.add(requestId);
+  console.log('Marked as recently updated (exit):', requestId);
+
   // Update local data immediately for instant UI feedback
   const localIndex = allData.findIndex(d => d.__backendId === requestId);
   if (localIndex !== -1) {
@@ -2670,12 +2796,15 @@ async function markAsExit(requestId) {
   const result = await window.dataSdk.update(updatedRequest);
   if (result.isOk) {
     showToast('خروج با موفقیت ثبت شد', '✅');
-    // Immediately sync requests from Google Sheets to ensure data consistency
-    await syncRequestsWithGoogleSheets(allData);
-    // Update UI again with synced data
-    updateCurrentPage();
+    // Remove from recently updated after successful sync
+    setTimeout(() => {
+      recentlyUpdatedIds.delete(requestId);
+      console.log('Removed from recently updated:', requestId);
+    }, 10000);
   } else {
     showToast('خطا در ثبت خروج', '❌');
+    // Remove from recently updated on error
+    recentlyUpdatedIds.delete(requestId);
   }
 }
 
@@ -2701,6 +2830,10 @@ async function markAsEntry(requestId) {
     status: 'completed'
   };
 
+  // Mark this request as recently updated to prevent sync from overwriting
+  recentlyUpdatedIds.add(requestId);
+  console.log('Marked as recently updated (entry):', requestId);
+
   // Update local data immediately for instant UI feedback
   const localIndex = allData.findIndex(d => d.__backendId === requestId);
   if (localIndex !== -1) {
@@ -2716,12 +2849,15 @@ async function markAsEntry(requestId) {
   if (result.isOk) {
     await updateMotorcycleUsageAfterCompletion(updatedRequest);
     showToast('ورود با موفقیت ثبت شد', '✅');
-    // Immediately sync requests from Google Sheets to ensure data consistency
-    await syncRequestsWithGoogleSheets(allData);
-    // Update UI again with synced data
-    updateCurrentPage();
+    // Remove from recently updated after successful sync
+    setTimeout(() => {
+      recentlyUpdatedIds.delete(requestId);
+      console.log('Removed from recently updated:', requestId);
+    }, 10000);
   } else {
     showToast('خطا در ثبت ورود', '❌');
+    // Remove from recently updated on error
+    recentlyUpdatedIds.delete(requestId);
   }
 }
 
