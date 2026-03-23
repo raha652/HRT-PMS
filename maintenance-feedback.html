@@ -1,4 +1,4 @@
-﻿<!doctype html>
+<!doctype html>
 <html lang="fa" dir="rtl">
 <head>
   <meta charset="UTF-8">
@@ -23,6 +23,7 @@
     .status-needs-repair { background-color: #ef4444; }
     .status-cannot-repair { background-color: #f97316; }
     .status-repaired { background-color: #22c55e; }
+    .status-under-review { background-color: #3b82f6; }
     .pinned-item { border-right: 4px solid #fbbf24; }
   </style>
 </head>
@@ -99,6 +100,7 @@
         <button id="status-filter-needs-repair" class="status-filter-btn px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200" onclick="setStatusFilter('نیاز به تعمیر دارد')"><span data-i18n="needs_repair">نیاز به تعمیر دارد</span></button>
         <button id="status-filter-repaired" class="status-filter-btn px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200" onclick="setStatusFilter('تعمیر شد')"><span data-i18n="repaired">تعمیر شد</span></button>
         <button id="status-filter-cannot-repair" class="status-filter-btn px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200" onclick="setStatusFilter('تعمیر نمیشود')"><span data-i18n="cannot_repair">تعمیر نمیشود</span></button>
+        <button id="status-filter-under-review" class="status-filter-btn px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200" onclick="setStatusFilter('در حال بررسی')"><span data-i18n="under_review">در حال بررسی</span></button>
       </div>
       <div class="flex items-center gap-2">
         <span id="item-count" class="text-gray-300 text-sm"><span data-i18n="items_count">0 مورد</span></span>
