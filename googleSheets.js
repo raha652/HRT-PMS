@@ -345,30 +345,159 @@ async function syncFuelReports() {
   }
 }
 
+// Helper function to format date to YYYY/MM/DD
+function formatDateToShamsi(dateValue) {
+  if (!dateValue) return '';
+  
+  // If already in correct format (YYYY/MM/DD)
+  if (typeof dateValue === 'string' && dateValue.match(/^\d{4}\/\d{2}\/\d{2}$/)) {
+    return dateValue;
+  }
+  
+  // If ISO format or Date object
+  let date;
+  if (typeof dateValue === 'string') {
+    date = new Date(dateValue);
+  } else if (dateValue instanceof Date) {
+    date = dateValue;
+  } else {
+    return '';
+  }
+  
+  if (isNaN(date.getTime())) return '';
+  
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}/${month}/${day}`;
+}
+
+// Helper function to format time to HH:MM
+function formatTimeToHHMM(timeValue) {
+  if (!timeValue) return '';
+  
+  // If already in correct format (HH:MM or HH:MM:SS)
+  if (typeof timeValue === 'string' && timeValue.match(/^\d{2}:\d{2}/)) {
+    return timeValue.substring(0, 5); // Return only HH:MM
+  }
+  
+  // If ISO format or Date object
+  let date;
+  if (typeof timeValue === 'string') {
+    date = new Date(timeValue);
+  } else if (timeValue instanceof Date) {
+    date = timeValue;
+  } else {
+    return '';
+  }
+  
+  if (isNaN(date.getTime())) return '';
+  
+  const hours = String(date.getHours()).padStart(2, '0');
+  const minutes = String(date.getMinutes()).padStart(2, '0');
+  return `${hours}:${minutes}`;
+}
+
 function mapFeedbackToGS(item) {
   const backendId = item.__backendId || (typeof generateId === 'function'
     ? generateId()
     : `fb-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`);
 
+  // Format replies including nested replies
+  let repliesText = '';
+  let repliesDates = '';
+  
+  if (item.replies && Array.isArray(item.replies) && item.replies.length > 0) {
+    const allReplies = [];
+    const allDates = [];
+    
+    item.replies.forEach(reply => {
+      allReplies.push(reply.content || '');
+      allDates.push(`${reply.date || ''} ${reply.authorName || ''}`);
+      
+      // Add nested replies
+      if (reply.replies && Array.isArray(reply.replies)) {
+        reply.replies.forEach(nested => {
+          allReplies.push(`↪️ ${nested.content || ''}`);
+          allDates.push(`${nested.date || ''} ${nested.authorName || ''}`);
+        });
+      }
+    });
+    
+    repliesText = allReplies.join(' | ');
+    repliesDates = allDates.join(' | ');
+  }
+
   return {
     'Unique ID':       backendId,
-    'نوع گزارش':      item.reportType,          // "نظریه" یا "پیشنهاد"
-    'نام کامل':       item.fullName,
-    'دیپارتمنت':     item.department,
+    'نوع گزارش':      item.reportType || '',          // "نظریه" یا "پیشنهاد"
+    'نام کامل':       item.fullName || '',
+    'دیپارتمنت':     item.department || '',
     'موتور سکیل':    item.motorcycle || '',     // فقط برای نظریه
     'رنگ موتور سکیل': item.motorcycleColor || '',     // رنگ موتور سکیل
     'دیپارتمنت موتور سکیل': item.motorcycleDepartment || '', // دیپارتمنت موتور سکیل
-    'متن':            item.content,
-    'تاریخ':          item.date,                 // تاریخ شمسی
-    'زمان ثبت':       item.timestamp,            // ISO برای مرتب‌سازی دقیق‌تر
+    'متن':            item.content || '',
+    'تاریخ':          formatDateToShamsi(item.date),  // تاریخ شمسی YYYY/MM/DD
+    'زمان ثبت':       formatTimeToHHMM(item.time),    // زمان HH:MM
     'وضعیت تعمیر':    item.repairStatus || 'نیاز به تعمیر دارد',  // وضعیت تعمیر
-    'تاریخ تعمیر':    item.repairDate || '',     // تاریخ تعمیر
+    'تاریخ تعمیر':    formatDateToShamsi(item.repairDate),  // تاریخ تعمیر YYYY/MM/DD
     'شخص تعمیر کننده': item.repairedBy || '',   // نام شخصی که تعمیر را انجام داده
-    'پین شده':        item.pinned ? 'بله' : 'خیر'  // آیا پین شده
+    'پین شده':        item.pinned ? 'بله' : 'خیر',  // آیا پین شده
+    'ریپلای‌ها':       repliesText,  // متن ریپلای‌ها (با ↪️ برای nested)
+    'تاریخ ریپلای':   repliesDates  // تاریخ و نویسنده ریپلای‌ها
   };
 }
 
 function mapGSToFeedback(record) {
+  // Parse replies from text columns with nested reply support
+  let replies = [];
+  try {
+    const repliesText = record['ریپلای‌ها'] || '';
+    const repliesDates = record['تاریخ ریپلای'] || '';
+    
+    if (repliesText) {
+      const contents = repliesText.split(' | ');
+      const dates = repliesDates.split(' | ');
+      
+      let currentReply = null;
+      
+      contents.forEach((content, index) => {
+        const trimmedContent = content.trim();
+        const dateInfo = dates[index] || '';
+        const parts = dateInfo.split(' ');
+        const date = parts[0] || '';
+        const authorName = parts.slice(1).join(' ') || '';
+        
+        // Check if this is a nested reply (starts with ↪️)
+        if (trimmedContent.startsWith('↪️')) {
+          // This is a nested reply, add to current reply's replies
+          if (currentReply !== null) {
+            if (!currentReply.replies) {
+              currentReply.replies = [];
+            }
+            currentReply.replies.push({
+              content: trimmedContent.substring(1).trim(), // Remove ↪️
+              date: date,
+              authorName: authorName
+            });
+          }
+        } else {
+          // This is a main reply
+          currentReply = {
+            content: trimmedContent,
+            date: date,
+            authorName: authorName,
+            replies: []
+          };
+          replies.push(currentReply);
+        }
+      });
+    }
+  } catch (e) {
+    console.error('Error parsing replies:', e);
+    replies = [];
+  }
+
   return {
     type:          'feedback',
     __backendId:   record['Unique ID'],
@@ -380,11 +509,12 @@ function mapGSToFeedback(record) {
     motorcycleDepartment: record['دیپارتمنت موتور سکیل'] || '',
     content:       record['متن'],
     date:          record['تاریخ'],
-    timestamp:     record['زمان ثبت'],
+    time:          record['زمان ثبت'],
     repairStatus:  record['وضعیت تعمیر'] || 'نیاز به تعمیر دارد',
     repairDate:    record['تاریخ تعمیر'] || '',
     repairedBy:    record['شخص تعمیر کننده'] || '',
-    pinned:        record['پین شده'] === 'بله'
+    pinned:        record['پین شده'] === 'بله',
+    replies:       replies
   };
 }
 
