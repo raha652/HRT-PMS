@@ -432,6 +432,7 @@ const translations = {
     needs_repair: 'نیاز به تعمیر دارد',
     repaired: 'تعمیر شد',
     cannot_repair: 'تعمیر نمیشود',
+    under_review: 'در حال بررسی',
     items_count: 'مورد',
     no_feedbacks: 'هیچ نظری ثبت نشده است',
     no_suggestions: 'هیچ پیشنهادی ثبت نشده است',
@@ -444,6 +445,10 @@ const translations = {
     pinned: 'سنجاق شد',
     unpinned: 'سنجاق برداشته شد',
     repair_time: 'زمان تعمیر',
+    reply: 'پاسخ',
+    write_reply: 'پاسخ خود را بنویسید...',
+    reply_submitted: 'پاسخ با موفقیت ثبت شد',
+    reply_error: 'خطا در ثبت پاسخ',
     
     // Direction
     dir: 'rtl',
@@ -909,6 +914,7 @@ const translations = {
     needs_repair: 'Needs Repair',
     repaired: 'Repaired',
     cannot_repair: 'Cannot Repair',
+    under_review: 'Under Review',
     items_count: 'items',
     no_feedbacks: 'No feedbacks registered',
     no_suggestions: 'No suggestions registered',
@@ -921,6 +927,10 @@ const translations = {
     pinned: 'Pinned',
     unpinned: 'Unpinned',
     repair_time: 'Repair Time',
+    reply: 'Reply',
+    write_reply: 'Write your reply...',
+    reply_submitted: 'Reply submitted successfully',
+    reply_error: 'Error submitting reply',
     
     // Direction
     dir: 'ltr',
@@ -1386,6 +1396,7 @@ const translations = {
     needs_repair: 'ترمیم ته اړتیا لري',
     repaired: 'ترمیم شو',
     cannot_repair: 'ترمیم کیدی نشي',
+    under_review: 'په بیاکتنو کې',
     items_count: 'توکي',
     no_feedbacks: 'هیڅ نظرونه ثبت ندي',
     no_suggestions: 'هیڅ وړاندیزونه ثبت ندي',
@@ -1398,6 +1409,10 @@ const translations = {
     pinned: 'پن شو',
     unpinned: 'پن ایستل شو',
     repair_time: 'د ترمیم وخت',
+    reply: 'ځواب',
+    write_reply: 'خپل ځواب ولیکئ...',
+    reply_submitted: 'ځواب په بریالیتوب سره ثبت شو',
+    reply_error: 'د ځواب په ثبت کې تیروتنه',
     
     // Direction
     dir: 'rtl',
