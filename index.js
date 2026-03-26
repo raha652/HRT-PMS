@@ -121,19 +121,28 @@ JalaliDate.jalaliToGregorian = function (j_y, j_m, j_d) {
   gd = gd < 10 ? "0" + gd : gd;
   return [gy, gm, gd];
 };
-const dataStorageKey = 'motorcycleManagementData_${defaultConfig.company_name}';
-const usersStorageKey = 'userAccountsData';
-const DB_NAME = 'MotorcycleManagementDB';
+const dataStorageKey = `motorcycleManagementData_${defaultConfig.company_name}`;
+const usersStorageKey = `userAccountsData_${defaultConfig.company_name}`;
+const DB_NAME = `MotorcycleManagementDB_${defaultConfig.company_name}`;
 const DB_VERSION = 1;
-const STORE_NAME = 'data';
+const STORE_NAME = `data_${defaultConfig.company_name}`;
 let db = null;
+let currentDbName = null; // Track current database name
 
 // Initialize IndexedDB
 async function initDB() {
   return new Promise((resolve, reject) => {
-    if (db) {
+    // Check if db is already open for the correct database
+    if (db && currentDbName === DB_NAME) {
       resolve(db);
       return;
+    }
+    
+    // Close existing connection if database name changed
+    if (db && currentDbName !== DB_NAME) {
+      db.close();
+      db = null;
+      console.log('Closed previous database connection, opening new one for:', DB_NAME);
     }
     
     const request = indexedDB.open(DB_NAME, DB_VERSION);
@@ -145,7 +154,10 @@ async function initDB() {
     
     request.onsuccess = () => {
       db = request.result;
-      console.log('IndexedDB initialized successfully');
+      currentDbName = DB_NAME; // Track the current database name
+      console.log('IndexedDB initialized successfully for company:', defaultConfig.company_name);
+      console.log('Database name:', DB_NAME);
+      console.log('Store name:', STORE_NAME);
       resolve(db);
     };
     
